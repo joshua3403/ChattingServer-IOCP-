@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일\System">
+      <UniqueIdentifier>{7c7bc7aa-ebec-45e9-ae2d-da97710d4334}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\DataStructure">
+      <UniqueIdentifier>{e946bbef-c2c0-4c07-ae7a-d5b5c55984c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\NetworkLibrary">
+      <UniqueIdentifier>{880d33ef-85cb-4fdd-aeea-bda94e4e060e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\DataStructure">
+      <UniqueIdentifier>{2d0c7ce4-74a1-44ee-af5c-01098021973b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetworkLibrary">
+      <UniqueIdentifier>{36b9869d-a32a-4247-82cc-98593b12fe38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\System">
+      <UniqueIdentifier>{26f221d9-22df-4d69-80d7-c1feabf0c397}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CCrashDumpClass.h">
+      <Filter>헤더 파일\System</Filter>
+    </ClInclude>
+    <ClInclude Include="CExceptClass.h">
+      <Filter>헤더 파일\System</Filter>
+    </ClInclude>
+    <ClInclude Include="CLog.h">
+      <Filter>헤더 파일\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Profiler(TLS).h">
+      <Filter>헤더 파일\System</Filter>
+    </ClInclude>
+    <ClInclude Include="CMemoryPool(LockFree)_TLS.h">
+      <Filter>헤더 파일\DataStructure</Filter>
+    </ClInclude>
+    <ClInclude Include="CNewRingBuffer.h">
+      <Filter>헤더 파일\DataStructure</Filter>
+    </ClInclude>
+    <ClInclude Include="Queue(LockFree).h">
+      <Filter>헤더 파일\DataStructure</Filter>
+    </ClInclude>
+    <ClInclude Include="Stack(LockFree).h">
+      <Filter>헤더 파일\DataStructure</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetWorkLibrary(MemoryPool).h">
+      <Filter>헤더 파일\NetworkLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>헤더 파일\System</Filter>
+    </ClInclude>
+    <ClInclude Include="CMessage.h">
+      <Filter>헤더 파일\DataStructure</Filter>
+    </ClInclude>
+    <ClInclude Include="ChattingServer.h">
+      <Filter>헤더 파일\NetworkLibrary</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>소스 파일\System</Filter>
+    </ClCompile>
+    <ClCompile Include="CCrashDump.cpp">
+      <Filter>소스 파일\System</Filter>
+    </ClCompile>
+    <ClCompile Include="CExceptClass.cpp">
+      <Filter>소스 파일\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiler(TLS).cpp">
+      <Filter>소스 파일\System</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetWorkLibrary(MemoryPool).cpp">
+      <Filter>소스 파일\NetworkLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="CMessage.cpp">
+      <Filter>소스 파일\DataStructure</Filter>
+    </ClCompile>
+    <ClCompile Include="CNewRingBuffer.cpp">
+      <Filter>소스 파일\DataStructure</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
