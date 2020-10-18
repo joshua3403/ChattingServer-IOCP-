@@ -22,6 +22,9 @@ class ChattingServer : public joshua::NetworkLibraryWan
 private:
 	std::unordered_map< UINT64, st_PLAYER> m_PlayerMap;
 
+	HANDLE hEvent;
+	CQueue<en_MSG_TYPE> MsgQ;
+
 public:
 	void OnClientJoin(SOCKADDR_IN* sockAddr, UINT64 sessionID);
 	void OnClientLeave(UINT64 sessionID);

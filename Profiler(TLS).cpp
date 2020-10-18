@@ -9,20 +9,12 @@ THREAD_NODE ProfileArray[e_DEF_PROFILER::e_MAX_THREAD_COUNT];
 
 // 해상도 변수
 LARGE_INTEGER			_IFrequency;
-<<<<<<< Updated upstream
-
-
-void InitialProfiler()
-{
-	QueryPerformanceFrequency(&_IFrequency);
-=======
 __int64 _dMicFrequency;
 
 void InitialProfiler()
 {
 	QueryPerformanceFrequency(&_IFrequency); 
 	_dMicFrequency = _IFrequency.QuadPart / 1000000;
->>>>>>> Stashed changes
 
 	_dwTLSIndex = TlsAlloc();
 	if (_dwTLSIndex == TLS_OUT_OF_INDEXES)
@@ -134,36 +126,13 @@ bool ProfilingEnd(WCHAR* szName)
 	LARGE_INTEGER liEndTime;
 	DWORD dwIndex;
 	NODE* targetNode;
-<<<<<<< Updated upstream
-=======
 	LARGE_INTEGER lPlayTime;
 	QueryPerformanceCounter(&liEndTime);
->>>>>>> Stashed changes
 
 	GetNode(szName, &targetNode);
 	if (targetNode == nullptr)
 		return false;
 
-<<<<<<< Updated upstream
-	QueryPerformanceCounter(&liEndTime);
-
-	__int64 PlayTime = (liEndTime.QuadPart - targetNode->lStartTime.QuadPart);
-
-	if (targetNode->iMax[1] < PlayTime)
-	{
-		targetNode->iMax[0] = targetNode->iMax[1];
-		targetNode->iMax[1] = PlayTime;
-	}
-
-	if (targetNode->iMin[1] > PlayTime)
-	{
-		targetNode->iMin[0] = targetNode->iMin[1];
-		targetNode->iMin[1] = PlayTime;
-	}
-
-	targetNode->iCall++;
-	targetNode->iTotalTime += PlayTime;
-=======
 
 	lPlayTime.QuadPart = (liEndTime.QuadPart - targetNode->lStartTime.QuadPart);
 
@@ -183,7 +152,6 @@ bool ProfilingEnd(WCHAR* szName)
 
 	targetNode->iCall++;
 	targetNode->iTotalTime += Time;
->>>>>>> Stashed changes
 	targetNode->lStartTime.QuadPart = 0;
 
 	return true;
@@ -228,29 +196,6 @@ bool ProfilePrint(void)
 
 			for (int j = 0; j < e_MAX_NODE_COUNT; j++)
 			{
-<<<<<<< Updated upstream
-				if (ProfileArray[i].pNode[j].bIsUse == true)
-				{
-					LONG64 average = ProfileArray[i].pNode[j].iTotalTime;
-
-					for (int t = 0; t < 2; t++)
-					{
-						average -= ProfileArray[i].pNode[j].iMin[t];
-						average -= ProfileArray[i].pNode[j].iMax[t];
-					}
-
-
-					average /= (ProfileArray[i].pNode[j].iCall - 4);
-
-					StringCchPrintf(wBuffer,
-						sizeof(wBuffer),
-						L" %9d  | %20s | %16.4lld ms | %14.4lldms | %14.4lld ms | %13d |\r\n",
-						ProfileArray[i].dwThreadID,
-						ProfileArray[i].pNode[j].szName,
-						(average * 1000000) / _IFrequency.QuadPart,
-						(ProfileArray[i].pNode[j].iMin[1] * 1000000) / _IFrequency.QuadPart,
-						(ProfileArray[i].pNode[j].iMax[1] * 1000000) / _IFrequency.QuadPart,
-=======
 				if (ProfileArray[i].pNode[j].bIsUse == TRUE)
 				{
 					__int64 average = ProfileArray[i].pNode[j].iTotalTime;
@@ -273,7 +218,6 @@ bool ProfilePrint(void)
 						/*ProfileArray[i].pNode[j].iTotalTime*/
 						(ProfileArray[i].pNode[j].iMin[1]),
 						(ProfileArray[i].pNode[j].iMax[1]),
->>>>>>> Stashed changes
 						ProfileArray[i].pNode[j].iCall
 					);
 					::WriteFile(hFile, wBuffer, wcslen(wBuffer) * sizeof(WCHAR), &dwBytesWritten, NULL);

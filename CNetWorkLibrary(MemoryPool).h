@@ -5,6 +5,7 @@
 #include "Queue(LockFree).h"
 #include "CMessage.h"
 #include "CLog.h"
+#include "CommonProtocol.h"
 
 #define READ 3
 #define WRITE 5
@@ -19,7 +20,11 @@
 #define GetSessionID(SessionID)		(SessionID & 0x00000fffffffffff)
 namespace joshua
 {
-
+	struct st_WORK
+	{
+		WORD FLAG;
+		CMessage* pMessage;
+	};
 
 
 	struct st_SESSION_FLAG
@@ -108,7 +113,6 @@ namespace joshua
 		LONG64 _lRecvTPS;
 		LONG64 _lAcceptTPS;
 		LONG64 _lAcceptCount;
-
 
 	private:
 		// 소켓 초기화

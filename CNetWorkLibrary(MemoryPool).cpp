@@ -50,6 +50,7 @@ BOOL joshua::NetworkLibraryWan::InitialNetwork(const WCHAR* ip, DWORD port, BOOL
 		LOG(L"SERVER", LOG_ERROR, L"%s\n", L"listen() Error!");
 		return fail;
 	}
+
 	return (!fail);
 }
 

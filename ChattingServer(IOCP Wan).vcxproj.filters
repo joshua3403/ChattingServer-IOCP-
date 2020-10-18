@@ -69,6 +69,9 @@
     <ClInclude Include="ChattingServer.h">
       <Filter>헤더 파일\NetworkLibrary</Filter>
     </ClInclude>
+    <ClInclude Include="CommonProtocol.h">
+      <Filter>헤더 파일\NetworkLibrary</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
