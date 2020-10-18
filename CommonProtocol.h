@@ -1,7 +1,11 @@
 //#ifndef __GODDAMNBUG_ONLINE_PROTOCOL__
 //#define __GODDAMNBUG_ONLINE_PROTOCOL__
 
-
+#define dfSECTOR_MAX_X 50
+#define dfSECTOR_MAX_Y 50
+#define dfID_LEN 40
+#define dfNiCK_LEN 40
+#define dfSESSIONKEY_LEN 64
 
 enum en_PACKET_TYPE
 {
@@ -115,11 +119,6 @@ enum en_PACKET_TYPE
 	// 서버는 40초 이상동안 메시지 수신이 없는 클라이언트를 강제로 끊어줘야 함.
 	//------------------------------------------------------------	
 	en_PACKET_CS_CHAT_REQ_HEARTBEAT,
-};
-
-enum en_MSG_TYPE
-{
-
 };
 
 

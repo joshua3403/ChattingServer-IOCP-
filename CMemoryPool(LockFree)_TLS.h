@@ -5,7 +5,7 @@
 #include "MemoryPool(LockFree).h"
 #include "Profiler(TLS).h"
 
-#define MAXDUMPCOUNT 3000
+#define MAXDUMPCOUNT 500
 #define CHECKCODE 0x0000000019921107
 
 template<class DATA>
@@ -16,15 +16,13 @@ private:
 	struct __declspec(align(64))st_DataDump_Node
 	{
 		CDataDump* pDataDump;
-<<<<<<< Updated upstream
-=======
+
 		__declspec(align(64))
->>>>>>> Stashed changes
 		DATA Data;
 	};
 
 public:
-	CLFFreeList_TLS(int count,BOOL bPlacementNew = false);
+	CLFFreeList_TLS(int count = 0,BOOL bPlacementNew = false);
 	virtual ~CLFFreeList_TLS();
 	DATA* Alloc();
 	bool Free(DATA* data);
@@ -41,23 +39,18 @@ private:
 
 		if (!TlsSetValue(m_dwTlsIndex, DataDump))
 			return nullptr;
-<<<<<<< Updated upstream
 
 		new (DataDump)CDataDump();
 
 		DataDump->m_pFreeList = this;
 
 		InterlockedIncrement(&m_dwUseCount);
-=======
-
 		//new (DataDump)CDataDump();
 
 		DataDump->m_pFreeList = this;
 
 		//InterlockedIncrement(&m_dwUseCount);
 		//m_dwUseCount++;
->>>>>>> Stashed changes
-
 		return DataDump;
 	}
 
@@ -73,10 +66,8 @@ private:
 	class CDataDump
 	{
 	public:
-<<<<<<< Updated upstream
 		CDataDump() : m_dwNodeCount(MAXDUMPCOUNT), m_dwFreeCount(MAXDUMPCOUNT), m_dwUsingCount(0) {};
 		virtual ~CDataDump() { delete[] m_pDataDumpNode; };
-=======
 		CDataDump() : m_dwNodeCount(MAXDUMPCOUNT - 1), m_dwFreeCount(MAXDUMPCOUNT - 1), m_dwUsingCount(0) 
 		{
 			for (int i = 0; i < MAXDUMPCOUNT; i++)
@@ -85,7 +76,6 @@ private:
 			}
 		};
 		virtual ~CDataDump() { };
->>>>>>> Stashed changes
 		DATA* Alloc();
 		bool Free();
 	private:
@@ -105,7 +95,6 @@ private:
 template<class DATA>
 inline DATA* CLFFreeList_TLS<DATA>::CDataDump::Alloc()
 {
-<<<<<<< Updated upstream
 	m_dwNodeCount--;
 	m_pDataDumpNode[m_dwNodeCount].pDataDump = this;
 	
@@ -114,29 +103,18 @@ inline DATA* CLFFreeList_TLS<DATA>::CDataDump::Alloc()
 
 	return &m_pDataDumpNode[m_dwNodeCount].Data;
 }
-=======
 
 
-	return data;
-}
-
-
->>>>>>> Stashed changes
 
 
 template<class DATA>
 inline bool CLFFreeList_TLS<DATA>::CDataDump::Free()
 {
-<<<<<<< Updated upstream
 	if (!(--m_dwFreeCount))
-	{
-=======
-	if (!(m_dwFreeCount))
 	{
 		m_dwUsingCount = 0;
 		m_dwNodeCount = MAXDUMPCOUNT - 1;
 		m_dwFreeCount = MAXDUMPCOUNT - 1;
->>>>>>> Stashed changes
 		m_pFreeList->m_pDataDump->Free(this);
 
 		return true;

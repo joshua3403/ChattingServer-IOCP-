@@ -204,6 +204,19 @@ public:
 		}
 	}
 
+	BOOL isEmpty(void)
+	{
+		if (0 == m_lSize)
+		{
+			if ((m_pHead->pTopNode) == (_pTail->pTopNode))
+			{
+				if (nullptr == m_pHead->pTopNode->NextNode)
+					return true;
+			}
+		}
+		return false;
+	}
+
 	LONG64 GetUsingCount(void)
 	{
 		return m_lSize;

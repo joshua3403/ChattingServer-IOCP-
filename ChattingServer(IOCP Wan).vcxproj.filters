@@ -95,5 +95,8 @@
     <ClCompile Include="CNewRingBuffer.cpp">
       <Filter>소스 파일\DataStructure</Filter>
     </ClCompile>
+    <ClCompile Include="ChattingServer.cpp">
+      <Filter>소스 파일\NetworkLibrary</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -158,6 +158,7 @@
   <ItemGroup>
     <ClCompile Include="CCrashDump.cpp" />
     <ClCompile Include="CExceptClass.cpp" />
+    <ClCompile Include="ChattingServer.cpp" />
     <ClCompile Include="CMessage.cpp" />
     <ClCompile Include="CNetWorkLibrary(MemoryPool).cpp" />
     <ClCompile Include="CNewRingBuffer.cpp" />

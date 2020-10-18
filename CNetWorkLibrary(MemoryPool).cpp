@@ -556,6 +556,17 @@ void joshua::NetworkLibraryWan::SendPacket(UINT64 id, CMessage* message)
 	return;
 }
 
+
+BOOL joshua::NetworkLibraryWan::Dissconnect(UINT64 id)
+{
+	st_SESSION* pSession = SessionReleaseCheck(id);
+	if (pSession == nullptr)
+		return FALSE;
+
+	DisconnectSocket(pSession->socket);
+	return TRUE;
+}
+
 void joshua::NetworkLibraryWan::Stop()
 {
 	SYSTEM_INFO si;

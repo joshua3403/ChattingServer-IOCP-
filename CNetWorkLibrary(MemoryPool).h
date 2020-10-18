@@ -168,7 +168,7 @@ namespace joshua
 		virtual void OnError(int errorcode, WCHAR*) = 0;
 		 
 		void SendPacket(UINT64 id, CMessage* message);
-		bool Dissconnect(UINT64 id, CMessage* message);
+		BOOL Dissconnect(UINT64 id);
 	public:
 
 		NetworkLibraryWan()
