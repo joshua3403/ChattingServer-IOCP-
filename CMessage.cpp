@@ -48,7 +48,7 @@ void CMessage::SetLanMessageHeader(char* header, int len)
 void CMessage::SetWanMessageHeader(char* header, int len)
 {
 	memcpy(m_cpHeadPtr, header, len);
-
+	//wprintf(L"%d\n", ((st_PACKET_HEADER*)header)->byCode);
 }
 
 void CMessage::SetEncodingCode()

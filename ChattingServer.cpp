@@ -33,12 +33,12 @@ BOOL ChattingServer::SectorUpdate(PLAYER* player, WORD SecX, WORD SecY)
 	if (SecX < 0 || SecY < 0 || SecX >= 50 || SecY >= 50)
 		return FALSE;
 	// 변경할 필요 없음
-	if (player->CurrentSector.iX == SecX && player->CurrentSector.iY == SecY)
+	if ((player->CurrentSector.iX == SecX) && (player->CurrentSector.iY == SecY))
 	{
 		return TRUE;
 	}
 
-	if(player->CurrentSector.iX != -1 && player->CurrentSector.iY != -1)
+	if((player->CurrentSector.iX != -1) && (player->CurrentSector.iY != -1))
 		ErasePlayerInSector(player->SessionID, player->CurrentSector.iX, player->CurrentSector.iY);
 
 	player->CurrentSector.iX = SecX;
@@ -140,6 +140,14 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 		return FALSE;
 	}
 
+	if (player->bLogined == FALSE)
+	{
+		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player is not login, SessionID = %lld", sessionID);
+		CRASH();
+		return FALSE;
+	}
+	player->recvTime = GetTickCount64();
+
 	(*message) >> iAccountNo;
 	if (iAccountNo != player->iAccountNo)
 	{
@@ -148,7 +156,6 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 		return FALSE;
 	}
 
-	player->recvTime = GetTickCount64();
 
 	(*message) >> wSectorX;
 	(*message) >> wSectorY;
@@ -160,7 +167,7 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 		return FALSE;
 	}
 
-	pPacket = Packet_Proc_RES_SectorMove(iAccountNo, player->CurrentSector.iX, player->CurrentSector.iY);
+	pPacket = Packet_Proc_RES_SectorMove(player->iAccountNo, player->CurrentSector.iX, player->CurrentSector.iY);
 
 	SendPacket_Unicast(sessionID, pPacket);
 
@@ -226,7 +233,6 @@ BOOL ChattingServer::Packet_Proc_REQ_HEARBEAT(UINT64 sessionID)
 CMessage* ChattingServer::Packet_Proc_RES_Login(INT64 accountNo, BYTE status)
 {
 	CMessage* pPacket = CMessage::Alloc();
-	pPacket->Clear();
 	(*pPacket) << (WORD)en_PACKET_CS_CHAT_RES_LOGIN;
 	(*pPacket) << status;
 	(*pPacket) << accountNo;
@@ -239,7 +245,7 @@ CMessage* ChattingServer::Packet_Proc_RES_Login(INT64 accountNo, BYTE status)
 CMessage* ChattingServer::Packet_Proc_RES_SectorMove(INT64 accountNo, WORD SecX, WORD SecY)
 {
 	CMessage* pPacket = CMessage::Alloc();
-	pPacket->Clear();
+
 	(*pPacket) << (WORD)en_PACKET_CS_CHAT_RES_SECTOR_MOVE;
 	(*pPacket) << (INT64)accountNo;
 	(*pPacket) << (WORD)SecX;
@@ -254,14 +260,17 @@ CMessage* ChattingServer::Packet_Proc_RES_Chat(PLAYER* player, CMessage* message
 {
 	CMessage* pPacket = CMessage::Alloc();
 	WORD len;
-	pPacket->Clear();
 	(*message) >> len;
 	(*pPacket) << (WORD)en_PACKET_CS_CHAT_RES_MESSAGE;
 	(*pPacket) << (INT64)player->iAccountNo;
 	pPacket->PutData((char*)player->ID, dfID_LEN);
 	pPacket->PutData((char*)player->Nick, dfNiCK_LEN);
 	(*pPacket) << len;
-	message->GetData(pPacket->GetBufferPtr() + pPacket->GetRear(), len);
+	message->GetData(pPacket->GetBufferPtr() + 92, len);
+	WCHAR temp[1024];
+	memcpy(temp, pPacket->GetBufferPtr() + 92, len);
+	temp[len] = '\0';
+	wprintf(L"%s %d\n", temp, len);
 	pPacket->MoveWritePos(len);
 	pPacket->SetEncodingCode();
 
@@ -314,14 +323,14 @@ void ChattingServer::Monitoring_Update()
 
 	while (!m_bShutdown)
 	{
-		PrintPacketCount();
+		/*PrintPacketCount();
 		wprintf(L"====================== Contents Monitor =======================\n");
 		wprintf(L" - MSGPoolUsingCount    : %08d\n", m_MSGPool.GetUseCount());
 		wprintf(L" - MSGPoolAllocCount    : %08d\n", m_MSGPool.GetAllocCount());
 		wprintf(L" - PlayerPoolUsingCount : %08d\n", m_PlayerPool.GetUseCount());
 		wprintf(L" - PlayerPoolAllocCount : %08d\n", m_PlayerPool.GetAllocCount());
 		wprintf(L" - UpdateThread TPS     : %08lld\n", m_lUpdateTps);
-		wprintf(L"===============================================================\n");
+		wprintf(L"===============================================================\n");*/
 		m_lUpdateTps = 0;
 		if (_kbhit() != 0)
 		{

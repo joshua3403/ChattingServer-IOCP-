@@ -9,7 +9,7 @@ int main()
 	setlocale(LC_ALL, "");
 
 
-	test->Start(12001, TRUE, NULL, 8, 1000);
+	test->Start(12001, TRUE, NULL, 8, 10000);
 
 	while (true)
 	{
