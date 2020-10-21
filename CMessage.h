@@ -3,7 +3,11 @@
 #include "CExceptClass.h"
 #include "CMemoryPool(LockFree)_TLS.h"
 
-#define FIXKEY 0x10
+#define dfFIX_KEY 0x32
+#define dfPACKET_CODE 0x77
+#define dfMESSAGE_HEADER_LEN 5
+
+
 
 #pragma pack(push, 1) 
 struct st_PACKET_HEADER
@@ -23,7 +27,7 @@ class CMessage
 	----------------------------------------------------------------*/
 	enum en_PACKET
 	{
-		eBUFFER_DEFAULT = 100,		// 패킷의 기본 버퍼 사이즈.
+		eBUFFER_DEFAULT = 300,		// 패킷의 기본 버퍼 사이즈.
 		eBUFFER_UPSCALE_BYTE = 1,
 		eBUFFER_UPSCALE_SHORT = 2,
 		eBUFFER_UPSCALE_INT = 4,
@@ -59,6 +63,7 @@ public:
 		m_iMaxSize = en_PACKET::eBUFFER_DEFAULT;
 		m_iFront = m_iRear = m_iUsingSize = m_lRefCount = 0;
 		m_cpHeadPtr = (char*)malloc(sizeof(char) * m_iMaxSize);
+		ZeroMemory(m_cpHeadPtr, sizeof(char) * m_iMaxSize);
 		m_cpPayloadBuffer = m_cpHeadPtr + 5;
 		InitializeCriticalSection(&m_CS);
 		m_bIsEncoded = false;
@@ -86,7 +91,7 @@ public:
 	{
 		if (m_cpPayloadBuffer != nullptr)
 		{
-			free(m_cpPayloadBuffer);
+			free(m_cpHeadPtr);
 		}
 	}
 
@@ -124,6 +129,11 @@ public:
 	void	Clear(void)
 	{
 		m_iFront = m_iRear = m_iUsingSize = m_lRefCount = 0;
+	}
+
+	void ClearPayload(void)
+	{
+		ZeroMemory(m_cpPayloadBuffer, eBUFFER_DEFAULT - 5);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -190,6 +200,8 @@ public:
 
 	void SetLanMessageHeader(char* header, int len);
 
+	void SetWanMessageHeader(char* header, int len);
+
 	void SetEncodingCode();
 
 	BOOL SetDecodingCode();
@@ -222,7 +234,6 @@ public:
 			m_iRear = m_iMaxSize;
 			m_iUsingSize = m_iMaxSize;
 		}
-
 		return temp;
 	}
 

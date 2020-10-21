@@ -45,71 +45,99 @@ void CMessage::SetLanMessageHeader(char* header, int len)
 	memcpy(m_cpHeadPtr + 3, &header, len);
 }
 
+void CMessage::SetWanMessageHeader(char* header, int len)
+{
+	memcpy(m_cpHeadPtr, header, len);
+
+}
+
 void CMessage::SetEncodingCode()
 {
-		if (m_bIsEncoded)
-			return;
+	if (m_bIsEncoded)
+		return;
 
-		char* payLoadPtr = GetBufferPtr();
-		char* headerPtr = GetWanHeaderPtr();
-		char randKey = m_bRandKey;
-		char key = FIXKEY;
-		short len = GetDataSize();
+	st_PACKET_HEADER header;
 
-		unsigned char checkSum = 0;
-		for (int i = 0; i < len; i++)
-		{
-			checkSum += payLoadPtr[i];
-		}
-		checkSum = checkSum % 256;
+	header.byCode = dfPACKET_CODE;
+	header.wLen = (WORD)GetDataSize();
+	header.byRandKey = rand() % 256;
 
-		char test = 0;
-		char test1 = 0;
-		for (int i = 0; i < len; i++)
-		{
-			test = payLoadPtr[i] ^ (test + randKey + i + 1);
-			payLoadPtr[i] = test ^ (test1 + key + i + 1);
-			test1 = payLoadPtr[i];
-		}
-		st_PACKET_HEADER* header = (st_PACKET_HEADER*)GetWanHeaderPtr();
-		header->byCode = FIXKEY;
-		header->byCheckSum = checkSum;
-		header->wLen = len;
-		header->byRandKey = randKey;
+	char* pPayload = GetBufferPtr();
+
+	char* pEncode = GetBufferPtr() - 1;
+
+	LONG cCheckSum = 0;
+	for (int i = 0; i < header.wLen; i++)
+	{
+		cCheckSum += pPayload[i];
+	}
+
+	header.byCheckSum = (BYTE)(cCheckSum % 256);
+
+	SetWanMessageHeader((char*)&header, 5);
+
+	BYTE E_n = 0;
+	BYTE P_n = 0;
+	for (int i = 0; i <= header.wLen; i++)
+	{
+		E_n = pEncode[i] ^ (E_n + header.byRandKey + i + 1);
+		pEncode[i] = E_n ^ (P_n + dfFIX_KEY + i + 1);
+		P_n = pEncode[i];
+	}
+
+
+
+	m_bIsEncoded = TRUE;
 }
 
 BOOL CMessage::SetDecodingCode()
 {
-	if(!m_bIsEncoded)
-		return FALSE;
-
 	st_PACKET_HEADER* packetHeader = (st_PACKET_HEADER*)m_cpHeadPtr;
 
-	char randKey = packetHeader->byRandKey;
-	char fixKey = FIXKEY;
+	BYTE randKey = packetHeader->byRandKey;
+	BYTE fixKey = dfFIX_KEY;
 	int dataSize = GetDataSize();
-	char* pPayload = GetBufferPtr();
+	char* pPayload = GetBufferPtr() - 1;
+	char* pCheck = GetBufferPtr();
 
-	// pHeaderÀÇ ·£´ýÅ°, Ã¼Å©¼¶, Playload º¹È£È­
-	packetHeader->byRandKey ^= fixKey;
-	packetHeader->byCheckSum ^= fixKey;
-	for (int i = 0; i < dataSize; i++)
+	if (packetHeader->byCode != dfPACKET_CODE)
 	{
-		pPayload[i] ^= fixKey;
+		LOG(L"SERVER", LOG_ERROR, L"Decoding Packet Code Error %c", (packetHeader->byCode));
+
+		return FALSE;
 	}
+
+	//// pHeaderÀÇ ·£´ýÅ°, Ã¼Å©¼¶, Playload º¹È£È­
+	//packetHeader->byCheckSum ^= (fixKey + 1);
+	//packetHeader->byCheckSum ^= (randKey + 1);
+	BYTE P_n = 0;
+	BYTE P_before = 0;
+	BYTE E_n = 0;
+	BYTE D_n = 0;
+
+	for (int i = 0; i <= dataSize; i++)
+	{
+		P_n = pPayload[i] ^ (E_n + fixKey + i + 1);
+		E_n = pPayload[i];
+		D_n = P_n ^ (P_before + randKey + i + 1);
+		P_before = P_n;
+		pPayload[i] = D_n;
+	}
+
 
 	// Ã¼Å©¼¶ °è»ê
-	int iCheck = 0;
+	DWORD iCheck = 0;
 	for (int i = 0; i < dataSize; i++)
 	{
-		iCheck += pPayload[i];
+		iCheck += pCheck[i];
 	}
 
-	char cCheck = (char)iCheck % 256;
+	BYTE cCheck = (BYTE)(iCheck % 256);
+
+
 	if (packetHeader->byCheckSum != cCheck)
 		return FALSE;
 	return TRUE;
-
 }
 
 void CMessage::IncreaseBufferSize(int size)
@@ -505,8 +533,6 @@ CMessage& CMessage::operator>>(WORD& wValue)
 
 	return *this;
 }
-
-
 
 CMessage& CMessage::operator>>(int& iValue)
 {

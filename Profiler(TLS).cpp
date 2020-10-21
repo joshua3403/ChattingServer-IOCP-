@@ -13,7 +13,7 @@ __int64 _dMicFrequency;
 
 void InitialProfiler()
 {
-	QueryPerformanceFrequency(&_IFrequency); 
+	QueryPerformanceFrequency(&_IFrequency);
 	_dMicFrequency = _IFrequency.QuadPart / 1000000;
 
 	_dwTLSIndex = TlsAlloc();
@@ -45,7 +45,6 @@ bool ProfilingBegin(WCHAR* szName)
 	targetNode->lStartTime = liStartTime;
 
 	return true;
-
 }
 
 bool GetNode(WCHAR* szName, NODE** outNode)
@@ -113,7 +112,6 @@ bool GetNode(WCHAR* szName, NODE** outNode)
 
 				*outNode = &targetNode[i];
 				break;
-
 			}
 		}
 	}
@@ -132,7 +130,6 @@ bool ProfilingEnd(WCHAR* szName)
 	GetNode(szName, &targetNode);
 	if (targetNode == nullptr)
 		return false;
-
 
 	lPlayTime.QuadPart = (liEndTime.QuadPart - targetNode->lStartTime.QuadPart);
 
@@ -200,12 +197,8 @@ bool ProfilePrint(void)
 				{
 					__int64 average = ProfileArray[i].pNode[j].iTotalTime;
 
-
-
 					average -= ProfileArray[i].pNode[j].iMin[1];
 					average -= ProfileArray[i].pNode[j].iMax[1];
-
-
 
 					average /= (ProfileArray[i].pNode[j].iCall - 2);
 

@@ -43,7 +43,7 @@ namespace joshua
 
 	struct st_SESSION
 	{
-		int index;
+		INT64 index;
 		UINT64 SessionID;
 		SOCKET socket;
 		SOCKADDR_IN clientaddr;

@@ -12,6 +12,12 @@ class ChattingServer : public joshua::NetworkLibraryWan
 		int iY;
 	} SECTORPOS;
 
+	typedef struct st_SECTOR_AROUND
+	{
+		int iCount;
+		SECTORPOS Around[9];
+	}SECTORAROUND;
+
 	typedef struct st_PLAYER
 	{
 		UINT64 SessionID;
@@ -41,8 +47,8 @@ class ChattingServer : public joshua::NetworkLibraryWan
 	}MSG;
 
 private:
-	CLFFreeList_TLS<PLAYER> m_PlayerPool;
-	CLFFreeList_TLS<MSG> m_MSGPool;
+	CLFFreeList<PLAYER> m_PlayerPool;
+	CLFFreeList<MSG> m_MSGPool;
 
 	BOOL m_bShutdown;
 
@@ -64,17 +70,22 @@ private:
 	// MSG header에 따른 동작
 	BOOL CreatePlayer(UINT64 sessionID);
 	BOOL SectorUpdate(PLAYER* player, WORD SecX, WORD SecY);
+	BOOL DeletePlayer(UINT64 sessionID);
 
 	// CMessage type에 따른 동작
 	BOOL Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message);
-	CMessage* Packet_Proc_RES_Login(INT64 acconutNo, BYTE status);
 	BOOL Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* message);
+	BOOL Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message);
+	BOOL Packet_Proc_REQ_HEARBEAT(UINT64 sessionID);
+
+
+	CMessage* Packet_Proc_RES_Login(INT64 acconutNo, BYTE status);
 	CMessage* Packet_Proc_RES_SectorMove(INT64 acconutNo, WORD SecX, WORD SecY);
+	CMessage* Packet_Proc_RES_Chat(PLAYER* player, CMessage* message);
 
-
-	MSG* Make_Create_Client(UINT64 sessionID);
+	MSG* Make_Message_Create_Client(UINT64 sessionID);
 	MSG* Make_Message_Packet(UINT64 sessionID, CMessage* message);
-
+	MSG* Make_Message_Disconnect_Client(UINT64 sessionID);
 
 	static unsigned int WINAPI Monitoring_Thread(LPVOID lpParam);
 	static unsigned int WINAPI Update_Thread(LPVOID lpParam);
@@ -87,12 +98,17 @@ private:
 	void ErasePlayer(UINT64 sessionID);
 	void InsertPlayerInSector(PLAYER* player, WORD SecX, WORD SecY);
 	void ErasePlayerInSector(UINT64 sessionID, WORD SecX, WORD SecY);
+	void GetSectorAround(int iSectorX, int iSectorY, SECTORAROUND* pSectorAround);
+
 
 	BOOL CompleteMsg(MSG* msg);
 	BOOL CompletePacket(UINT64 sessionID, CMessage* message);
 
 	// 패킷 보내는 함수
 	void SendPacket_Unicast(UINT64 sessionID, CMessage* message);
+	void SendPacket_Around(PLAYER* player, CMessage* message, BOOL bSendMe);
+	void SendPacket_SectorOne(int x, int y, CMessage* message, PLAYER* player = nullptr);
+
 public:
 
 	ChattingServer();

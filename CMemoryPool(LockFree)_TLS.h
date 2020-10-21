@@ -16,7 +16,6 @@ private:
 	struct __declspec(align(64))st_DataDump_Node
 	{
 		CDataDump* pDataDump;
-
 		__declspec(align(64))
 		DATA Data;
 	};
@@ -40,17 +39,13 @@ private:
 		if (!TlsSetValue(m_dwTlsIndex, DataDump))
 			return nullptr;
 
-		new (DataDump)CDataDump();
-
-		DataDump->m_pFreeList = this;
-
-		InterlockedIncrement(&m_dwUseCount);
 		//new (DataDump)CDataDump();
 
 		DataDump->m_pFreeList = this;
 
 		//InterlockedIncrement(&m_dwUseCount);
 		//m_dwUseCount++;
+
 		return DataDump;
 	}
 
@@ -66,8 +61,6 @@ private:
 	class CDataDump
 	{
 	public:
-		CDataDump() : m_dwNodeCount(MAXDUMPCOUNT), m_dwFreeCount(MAXDUMPCOUNT), m_dwUsingCount(0) {};
-		virtual ~CDataDump() { delete[] m_pDataDumpNode; };
 		CDataDump() : m_dwNodeCount(MAXDUMPCOUNT - 1), m_dwFreeCount(MAXDUMPCOUNT - 1), m_dwUsingCount(0) 
 		{
 			for (int i = 0; i < MAXDUMPCOUNT; i++)
@@ -97,8 +90,8 @@ inline DATA* CLFFreeList_TLS<DATA>::CDataDump::Alloc()
 {
 	m_dwNodeCount--;
 	m_pDataDumpNode[m_dwNodeCount].pDataDump = this;
-	
-	if (0 ==  m_dwNodeCount)
+
+	if (0 == m_dwNodeCount)
 		m_pFreeList->DataDumpAlloc();
 
 	return &m_pDataDumpNode[m_dwNodeCount].Data;
@@ -106,11 +99,10 @@ inline DATA* CLFFreeList_TLS<DATA>::CDataDump::Alloc()
 
 
 
-
 template<class DATA>
 inline bool CLFFreeList_TLS<DATA>::CDataDump::Free()
 {
-	if (!(--m_dwFreeCount))
+	if (!(m_dwFreeCount))
 	{
 		m_dwUsingCount = 0;
 		m_dwNodeCount = MAXDUMPCOUNT - 1;
@@ -148,11 +140,6 @@ inline DATA* CLFFreeList_TLS<DATA>::Alloc()
 	{
 		DataDump = DataDumpAlloc();
 	}
-<<<<<<< Updated upstream
-	InterlockedIncrement(&m_dwUseCount);	 
-
-	return DataDump->Alloc();
-=======
 	//PRO_END(_T("DataDumpAlloc()"));
 	InterlockedIncrement(&m_dwUseCount);	
 	//m_dwUseCount++;
@@ -164,20 +151,12 @@ inline DATA* CLFFreeList_TLS<DATA>::Alloc()
 		DataDump->m_pFreeList->DataDumpAlloc();
 	//PRO_END(_T("Alloc()"));
 	return data;
->>>>>>> Stashed changes
 }
 
 template<class DATA>
 inline bool CLFFreeList_TLS<DATA>::Free(DATA* data)
 {
-<<<<<<< Updated upstream
-	st_DataDump_Node* DataDump = (st_DataDump_Node*)((char*)data - sizeof(st_DataDump_Node::pDataDump));
-
-	InterlockedDecrement(&m_dwUseCount);
-	
-	return DataDump->pDataDump->Free();
-=======
-	st_DataDump_Node* DataDump = (st_DataDump_Node*)((char*)data - 64);
+	st_DataDump_Node* DataDump = (st_DataDump_Node*)((char*)data -64);
 
 	InterlockedDecrement(&m_dwUseCount);
 	
@@ -190,7 +169,6 @@ inline bool CLFFreeList_TLS<DATA>::Free(DATA* data)
 		return true;
 	}
 	return false;
->>>>>>> Stashed changes
 }
 
 

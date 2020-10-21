@@ -2,7 +2,6 @@
 
 #include "CNewRingBuffer.h"
 
-
 RingBuffer::RingBuffer()
 {
 	_buffer = NULL;
@@ -11,7 +10,6 @@ RingBuffer::RingBuffer()
 	_readPos = 0;
 	_writePos = 0;
 	Initial(DEFAULT_SIZE);
-
 }
 RingBuffer::RingBuffer(int iBufferSize)
 {
@@ -35,7 +33,6 @@ RingBuffer::~RingBuffer()
 	_writePos = 0;
 
 	wprintf(L"Here\n");
-
 }
 
 void RingBuffer::Initial(int iBufferSize)
@@ -51,9 +48,7 @@ void RingBuffer::Initial(int iBufferSize)
 	_writePos = 0;
 
 	_buffer = new char[iBufferSize];
-
 }
-
 
 int	RingBuffer::GetBufferSize(void)
 {
@@ -75,7 +70,6 @@ int RingBuffer::GetUseSize(void)
 	{
 		return _bufferSize - _readPos + _writePos;
 	}
-
 }
 
 int RingBuffer::GetFreeSize(void)
@@ -220,7 +214,6 @@ int	RingBuffer::Peek(char* chpDest, int iSize)
 	}
 
 	return iSize;
-
 }
 
 void RingBuffer::MoveWritePos(int iSize)
@@ -264,7 +257,6 @@ void RingBuffer::ClearBuffer(void)
 	_readPos = 0;
 	_writePos = 0;
 }
-
 
 char* RingBuffer::GetBufferPtr(void)
 {

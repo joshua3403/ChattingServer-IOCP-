@@ -26,7 +26,7 @@ BOOL joshua::NetworkLibraryWan::InitialNetwork(const WCHAR* ip, DWORD port, BOOL
 	// bind()
 	ZeroMemory(&_serveraddr, sizeof(_serveraddr));
 	_serveraddr.sin_family = AF_INET;
-	if(ip == NULL)
+	if (ip == NULL)
 		_serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	else
 		InetPton(AF_INET, ip, &_serveraddr.sin_addr);
@@ -37,7 +37,6 @@ BOOL joshua::NetworkLibraryWan::InitialNetwork(const WCHAR* ip, DWORD port, BOOL
 		LOG(L"SERVER", LOG_ERROR, L"%s\n", L"bind() Error!");
 		return fail;
 	}
-
 
 	//wprintf(L"sendbuf size : %d\n", optval);
 
@@ -97,7 +96,7 @@ BOOL joshua::NetworkLibraryWan::CreateThread(DWORD threadCount)
 BOOL joshua::NetworkLibraryWan::CreateSession()
 {
 	_SessionArray = new st_SESSION[_dwSessionMax];
-	for(__int64 i = _dwSessionMax - 1; i >= 0; --i)
+	for (__int64 i = _dwSessionMax - 1; i >= 0; --i)
 	{
 		_SessionArray[i].index = i;
 		PushIndex(i);
@@ -120,7 +119,6 @@ UINT64 joshua::NetworkLibraryWan::PopIndex()
 	LeaveCriticalSection(&_IndexStackCS);
 
 	return temp;
- 
 }
 
 joshua::st_SESSION* joshua::NetworkLibraryWan::InsertSession(SOCKET sock, SOCKADDR_IN* sockaddr)
@@ -217,7 +215,7 @@ void joshua::NetworkLibraryWan::AcceptThread(void)
 			DisconnectSocket(clientsocket);
 			continue;
 		}
-		
+
 		if (OnConnectionRequest(&clientaddr) == FALSE)
 		{
 			WCHAR szParam[16] = { 0 };
@@ -260,15 +258,13 @@ void joshua::NetworkLibraryWan::AcceptThread(void)
 		pSession->lIO->bIsReleased = FALSE;
 
 		OnClientJoin(&pSession->clientaddr, pSession->SessionID);
-		
-		PostRecv(pSession);
 
+		PostRecv(pSession);
 
 		if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 		{
 			SessionRelease(pSession);
 		}
-	
 	}
 	LOG(L"SYSTEM", LOG_DEBUG, L"AcceptThread Exit");
 	return;
@@ -279,7 +275,7 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 	int retval;
 	// 비동기 입출력 완료 기다리기
 	DWORD cbTransferred;
-	LPOVERLAPPED pOverlapped;
+	LPOVERLAPPED  pOverlapped;
 	st_SESSION* pSession;
 	while (true)
 	{
@@ -287,14 +283,13 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 		pOverlapped = 0;
 		pSession = 0;
 
-
 		// GQCS return 경우의 수.
 		// 1. IOCP Queue로부터 완료패킷을 얻어내는 데 성공한 경우 => TRUE 리턴, lpCompletionKey 세팅
 
 		// 2. IOCP Queue로부터 완료패킷을 얻어내는 데 실패한 경우와 동시에 lpOverlapped가 NULL인 경우 => FALSE 리턴
 
-		// 3. IOCP Queue로부터 완료패킷을 얻어내는 데 성공한 경우와 동시에 
-		//	  lpOverlapped가 NULL이 아닌 경우이면서 
+		// 3. IOCP Queue로부터 완료패킷을 얻어내는 데 성공한 경우와 동시에
+		//	  lpOverlapped가 NULL이 아닌 경우이면서
 		//    dequeue한 요소가 실패한 I/O인 경우
 		// => FALSE리턴, lpCompletionKey 세팅
 
@@ -334,7 +329,6 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 				{
 					SendComplete(pSession, cbTransferred);
 				}
-
 
 				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 				{
@@ -388,8 +382,8 @@ bool joshua::NetworkLibraryWan::PostSend(st_SESSION* pSession)
 	{
 		if (!pSession->SendBuffer.Peek(pPacket, iBufCnt))
 			break;
-		wsabuf[iBufCnt].buf = pPacket->GetBufferPtr();
-		wsabuf[iBufCnt].len = pPacket->GetDataSize();
+		wsabuf[iBufCnt].buf = pPacket->GetWanHeaderPtr();
+		wsabuf[iBufCnt].len = pPacket->GetDataSize() + 5;
 	}
 	pSession->dwPacketCount = iBufCnt;
 	DWORD dwTransferred = 0;
@@ -445,20 +439,22 @@ bool joshua::NetworkLibraryWan::PostRecv(st_SESSION* pSession)
 			// WSAECONNRESET(10054) : 원격 호스트에 의해 기존 연결 강제 해제. 원격 호스트가 갑자기 중지되거나 다시 시작되거나 하드 종료를 사용하는 경우
 			// WSAESHUTDOWN(10058) : 소켓 종료 후 전송
 			if (error != 10038 && error != 10053 && error != 10054 && error != 10058)
-				LOG(L"SYSTEM", LOG_ERROR, L"WSASend() # failed%d / Socket:%d / IOCnt:%d / SendQ Size:%d", error, pSession->socket, pSession->lIO->lIOCount, pSession->SendBuffer.GetUsingCount());
+			{
+				LOG(L"SYSTEM", LOG_ERROR, L"WSASend() # failed%d / Socket:%d / IOCnt:%d / SendQ Size:%d", error, pSession->socket, pSession->lIO->lIOCount, pSession->SendBuffer.GetUsingCount()); 
+				CRASH();
+			}
+
 
 			//DisconnectSession(pSession);
 			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 				SessionRelease(pSession);
 
 			return false;
-
 		}
 	}
 
 	return true;
 }
-
 
 BOOL joshua::NetworkLibraryWan::Start(DWORD port, BOOL nagle, const WCHAR* ip, DWORD threadCount, __int64 MaxClient)
 {
@@ -523,7 +519,6 @@ void joshua::NetworkLibraryWan::SessionRelease(st_SESSION* pSession)
 	pSession->lMessageList.clear();
 	PushIndex(pSession->index);
 	InterlockedDecrement64(&_dwSessionCount);
-
 }
 
 void joshua::NetworkLibraryWan::DisconnectSocket(SOCKET sock)
@@ -556,7 +551,6 @@ void joshua::NetworkLibraryWan::SendPacket(UINT64 id, CMessage* message)
 	return;
 }
 
-
 BOOL joshua::NetworkLibraryWan::Dissconnect(UINT64 id)
 {
 	st_SESSION* pSession = SessionReleaseCheck(id);
@@ -564,6 +558,11 @@ BOOL joshua::NetworkLibraryWan::Dissconnect(UINT64 id)
 		return FALSE;
 
 	DisconnectSocket(pSession->socket);
+	
+	if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+		SessionRelease(pSession);
+
+
 	return TRUE;
 }
 
@@ -620,16 +619,13 @@ void joshua::NetworkLibraryWan::Stop()
 void joshua::NetworkLibraryWan::PrintPacketCount()
 {
 	wprintf(L"==================== IOCP Echo Server Test ====================\n");
-	wprintf(L" - SessionCount : %lld\n", _dwSessionCount);
-	wprintf(L" - Accept Count : %08lld\n", _lAcceptCount);
-	wprintf(L" - Accept TPS : %08lld\n", _lAcceptTPS);
-	wprintf(L" - Send TPS : %08lld\n", _lSendTPS);
-	wprintf(L" - Recv TPS : %08lld\n", _lRecvTPS);
-	//wprintf(L" - PacketAlloc : %08d\n", CMessage::GetPacketAllocSize());
-	wprintf(L" - PacketUse : %08d\n", CMessage::GetPacketUsingSize());
-	wprintf(L"===============================================================\n");
+	wprintf(L" - SessionCount         : %lld\n", _dwSessionCount);
+	wprintf(L" - Accept Count         : %08lld\n", _lAcceptCount);
+	wprintf(L" - Accept TPS           : %08lld\n", _lAcceptTPS);
+	wprintf(L" - Send TPS             : %08lld\n", _lSendTPS);
+	wprintf(L" - Recv TPS             : %08lld\n", _lRecvTPS);
+	wprintf(L" - PacketUse            : %08d\n", CMessage::GetPacketUsingSize());
 	_lAcceptTPS = _lSendTPS = _lRecvTPS = 0;
-
 }
 
 void joshua::NetworkLibraryWan::DisconnectSession(st_SESSION* pSession)
@@ -641,7 +637,6 @@ void joshua::NetworkLibraryWan::DisconnectSession(st_SESSION* pSession)
 
 	retval = setsockopt(pSession->socket, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
 	closesocket(pSession->socket);
-
 }
 
 joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessionID)
@@ -664,7 +659,7 @@ joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessi
 		return nullptr;
 
 	// ioCount가 증가해서 1이라는 뜻은 어디선가 이 세션에 대한 release가 진행되고 있다는 뜻.
-	if (InterlockedIncrement64(&pSession->lIO->lIOCount) == 1) 
+	if (InterlockedIncrement64(&pSession->lIO->lIOCount) == 1)
 	{
 		if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 			SessionRelease(pSession);
@@ -691,7 +686,6 @@ joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessi
 	//if (pSession == nullptr)
 	//	return nullptr;
 
-
 	return nullptr;
 }
 
@@ -701,39 +695,33 @@ void joshua::NetworkLibraryWan::RecvComplete(st_SESSION* pSession, DWORD dwTrans
 	st_PACKET_HEADER packetHeader;
 
 	// Header는 Payload 길이를 담은 2Byte 크기의 타입
-	WORD wHeader;
 	while (1)
 	{
 		// 1. RecvQ에 'sizeof(Header)'만큼 있는지 확인
 		int iRecvSize = pSession->RecvBuffer.GetUseSize();
-		if (iRecvSize < sizeof(wHeader))
+		if (iRecvSize < dfMESSAGE_HEADER_LEN)
 		{
 			// 더 이상 처리할 패킷이 없음
 			// 만약, Header 크기보다 작은 모종의 데이터가 누적된다면 2번에서 걸러짐
 			break;
 		}
 
-		// 2. Packet 길이 확인 : Header크기('sizeof(Header)') + Payload길이('Header')
-		pSession->RecvBuffer.Peek(reinterpret_cast<char*>(&wHeader), sizeof(wHeader));
-
-		if(wHeader != 8)
+		pSession->RecvBuffer.Peek(reinterpret_cast<char*>(&packetHeader), sizeof(packetHeader));
+		// 2. Packet 길이 확인 : Header크기('sizeof(packetHeader)') + Payload길이('Header')
+		if (pSession->RecvBuffer.GetUseSize() < sizeof(packetHeader) + packetHeader.wLen)
 		{			// Header의 Payload의 길이가 실제와 다름
 			DisconnectSession(pSession);
 			LOG(L"SYSTEM", LOG_WARNNING, L"Header Error");
 			break;
 		}
 
-		if (iRecvSize < sizeof(wHeader) + wHeader)
-		{
-			// Header의 Payload의 길이가 실제와 다름
-			DisconnectSession(pSession);
-			LOG(L"SYSTEM", LOG_WARNNING, L"Header & PayloadLength mismatch");
-			break;
-		}
 
 		CMessage* pPacket = CMessage::Alloc();
+		pPacket->Clear();
+		//pPacket->PutData((char*)&packetHeader, sizeof(packetHeader));
 
-		(*pPacket) << wHeader;
+		pPacket->SetWanMessageHeader((char*)&packetHeader, sizeof(packetHeader));
+
 
 		//// 3. Payload 길이 확인 : PacketBuffer의 최대 크기보다 Payload가 클 경우
 		//if (pPacket->GetBufferSize() < wHeader)
@@ -743,10 +731,10 @@ void joshua::NetworkLibraryWan::RecvComplete(st_SESSION* pSession, DWORD dwTrans
 		//	LOG(L"SYSTEM", LOG_WARNNING, L"PacketBufferSize < PayloadSize ");
 		//	break;
 		//}
-		pSession->RecvBuffer.RemoveData(sizeof(wHeader));
+		pSession->RecvBuffer.RemoveData(sizeof(packetHeader));
 
 		// 4. PacketPool에 Packet 포인터 할당
-		if (pSession->RecvBuffer.Peek(pPacket->GetBufferPtr() + 2, wHeader) != wHeader)
+		if (pSession->RecvBuffer.Peek(pPacket->GetBufferPtr(), packetHeader.wLen) != packetHeader.wLen)
 		{
 			pPacket->SubRef();
 			LOG(L"SYSTEM", LOG_WARNNING, L"RecvQ dequeue error");
@@ -754,15 +742,20 @@ void joshua::NetworkLibraryWan::RecvComplete(st_SESSION* pSession, DWORD dwTrans
 			break;
 		}
 
-		pPacket->MoveWritePos(wHeader);
+		pPacket->MoveWritePos(packetHeader.wLen);
 		//UINT64 data;
 		//memcpy(&data, pPacket->GetBufferPtr() + 2, 8);
 		////wprintf(L"Recv data : %08ld\n", data);
 		// 5. Packet 처리
-		pSession->RecvBuffer.RemoveData(wHeader);
+		pSession->RecvBuffer.RemoveData(packetHeader.wLen);
 		InterlockedIncrement64(&_lRecvTPS);
 
-		pPacket->SetDecodingCode();
+		if (pPacket->SetDecodingCode() == FALSE)
+		{
+			LOG(L"SYSTEM", LOG_WARNNING, L"Decoding Error! SessionID %lld, Packet %x", pSession->SessionID, pPacket->GetWanHeaderPtr());
+			DisconnectSession(pSession);
+			break;
+		}
 
 		OnRecv(pSession->SessionID, pPacket);
 

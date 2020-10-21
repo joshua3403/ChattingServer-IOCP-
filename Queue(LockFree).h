@@ -208,7 +208,7 @@ public:
 	{
 		if (0 == m_lSize)
 		{
-			if ((m_pHead->pTopNode) == (_pTail->pTopNode))
+			if ((m_pHead->pTopNode) == (m_pTail->pTopNode))
 			{
 				if (nullptr == m_pHead->pTopNode->NextNode)
 					return true;
