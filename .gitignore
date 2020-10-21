@@ -32,3 +32,15 @@
 *.app
 *.txt
 x64/
+.vs/ChattingServer(IOCP Wan)/v16/.suo
+.vs/ChattingServer(IOCP Wan)/v16/Browse.VC.db
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/1255aea1d2d81f89/MAIN.ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/23ec45ec71968192/CMEMORYPOOL(LOCKFREE)_TLS.ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/2e733c6b85406e2d/EXE_COMMON.ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/3b2fb528c873fa78/TESTMAIN.ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/42b6bc3cd07ee9e9/CHATTINGSERVER.ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/73df218f3c69f5b4/CNPACKET.ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/ac3a030b03bbce46/CNETWORKLIBRARY(MEMORYPOOL).ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/d6e9708039f703c9/CNPACKET.ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/ee63af04b51ffd27/CMEMORYPOOL(LOCKFREE)_TLS.ipch
+.vs/ChattingServer(IOCP Wan)/v16/ipch/AutoPCH/ee7294bbda5aeff4/CMESSAGE.ipch
