@@ -710,8 +710,8 @@ void joshua::NetworkLibraryWan::RecvComplete(st_SESSION* pSession, DWORD dwTrans
 		// 2. Packet 길이 확인 : Header크기('sizeof(packetHeader)') + Payload길이('Header')
 		if (pSession->RecvBuffer.GetUseSize() < sizeof(packetHeader) + packetHeader.wLen)
 		{			// Header의 Payload의 길이가 실제와 다름
-			DisconnectSession(pSession);
-			LOG(L"SYSTEM", LOG_WARNNING, L"Header Error");
+			//DisconnectSession(pSession);
+			//LOG(L"SYSTEM", LOG_WARNNING, L"Header Error");
 			break;
 		}
 

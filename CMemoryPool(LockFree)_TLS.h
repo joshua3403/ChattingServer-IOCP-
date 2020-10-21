@@ -149,7 +149,6 @@ inline DATA* CLFFreeList_TLS<DATA>::Alloc()
 
 	if (-1 == (--DataDump->m_dwNodeCount))
 		DataDump->m_pFreeList->DataDumpAlloc();
-	//PRO_END(_T("Alloc()"));
 	return data;
 }
 

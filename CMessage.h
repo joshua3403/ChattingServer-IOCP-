@@ -129,6 +129,7 @@ public:
 	void	Clear(void)
 	{
 		m_iFront = m_iRear = m_iUsingSize = m_lRefCount = 0;
+		ZeroMemory(m_cpHeadPtr, eBUFFER_DEFAULT);
 	}
 
 	void ClearPayload(void)

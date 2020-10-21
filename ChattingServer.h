@@ -47,8 +47,8 @@ class ChattingServer : public joshua::NetworkLibraryWan
 	}MSG;
 
 private:
-	CLFFreeList<PLAYER> m_PlayerPool;
-	CLFFreeList<MSG> m_MSGPool;
+	CLFFreeList_TLS<PLAYER> m_PlayerPool;
+	CLFFreeList_TLS<MSG> m_MSGPool;
 
 	BOOL m_bShutdown;
 

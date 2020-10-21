@@ -245,6 +245,11 @@ CMessage* ChattingServer::Packet_Proc_RES_Login(INT64 accountNo, BYTE status)
 CMessage* ChattingServer::Packet_Proc_RES_SectorMove(INT64 accountNo, WORD SecX, WORD SecY)
 {
 	CMessage* pPacket = CMessage::Alloc();
+	if (pPacket == nullptr)
+	{
+		wprintf(L"Error");
+		return nullptr;
+	}
 
 	(*pPacket) << (WORD)en_PACKET_CS_CHAT_RES_SECTOR_MOVE;
 	(*pPacket) << (INT64)accountNo;
@@ -259,6 +264,11 @@ CMessage* ChattingServer::Packet_Proc_RES_SectorMove(INT64 accountNo, WORD SecX,
 CMessage* ChattingServer::Packet_Proc_RES_Chat(PLAYER* player, CMessage* message)
 {
 	CMessage* pPacket = CMessage::Alloc();
+	if (pPacket == nullptr)
+	{
+		wprintf(L"Error");
+		return nullptr;
+	}
 	WORD len;
 	(*message) >> len;
 	(*pPacket) << (WORD)en_PACKET_CS_CHAT_RES_MESSAGE;
@@ -268,9 +278,9 @@ CMessage* ChattingServer::Packet_Proc_RES_Chat(PLAYER* player, CMessage* message
 	(*pPacket) << len;
 	message->GetData(pPacket->GetBufferPtr() + 92, len);
 	WCHAR temp[1024];
-	memcpy(temp, pPacket->GetBufferPtr() + 92, len);
-	temp[len] = '\0';
-	wprintf(L"%s %d\n", temp, len);
+	//ZeroMemory(temp, sizeof(WCHAR) * 1024);
+	//memcpy(temp, pPacket->GetBufferPtr() + 92, len);
+	//wprintf(L"%s %d\n", temp, len);
 	pPacket->MoveWritePos(len);
 	pPacket->SetEncodingCode();
 
@@ -323,14 +333,16 @@ void ChattingServer::Monitoring_Update()
 
 	while (!m_bShutdown)
 	{
-		/*PrintPacketCount();
+		PrintPacketCount();
 		wprintf(L"====================== Contents Monitor =======================\n");
 		wprintf(L" - MSGPoolUsingCount    : %08d\n", m_MSGPool.GetUseCount());
 		wprintf(L" - MSGPoolAllocCount    : %08d\n", m_MSGPool.GetAllocCount());
 		wprintf(L" - PlayerPoolUsingCount : %08d\n", m_PlayerPool.GetUseCount());
 		wprintf(L" - PlayerPoolAllocCount : %08d\n", m_PlayerPool.GetAllocCount());
 		wprintf(L" - UpdateThread TPS     : %08lld\n", m_lUpdateTps);
-		wprintf(L"===============================================================\n");*/
+		wprintf(L" - PlayerMap Size       : %08lld\n", m_PlayerMap.size());
+
+		wprintf(L"===============================================================\n");
 		m_lUpdateTps = 0;
 		if (_kbhit() != 0)
 		{
