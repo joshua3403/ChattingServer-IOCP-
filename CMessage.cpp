@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "CMessage.h"
 
-CLFFreeList_TLS<CMessage> CMessage::g_PacketPool;
+CLFFreeList<CMessage> CMessage::g_PacketPool;
 
 void CMessage::PutData(char* data, int size)
 {
@@ -48,10 +48,9 @@ void CMessage::SetLanMessageHeader(char* header, int len)
 void CMessage::SetWanMessageHeader(char* header, int len)
 {
 	memcpy(m_cpHeadPtr, header, len);
-	//wprintf(L"%d\n", ((st_PACKET_HEADER*)header)->byCode);
 }
 
-void CMessage::SetEncodingCode()
+void CMessage::SetEncodingCode(int len)
 {
 	if (m_bIsEncoded)
 		return;
@@ -78,14 +77,13 @@ void CMessage::SetEncodingCode()
 
 	BYTE E_n = 0;
 	BYTE P_n = 0;
+
 	for (int i = 0; i <= header.wLen; i++)
 	{
 		E_n = pEncode[i] ^ (E_n + header.byRandKey + i + 1);
 		pEncode[i] = E_n ^ (P_n + dfFIX_KEY + i + 1);
 		P_n = pEncode[i];
 	}
-
-
 
 	m_bIsEncoded = TRUE;
 }
@@ -221,6 +219,7 @@ CMessage& CMessage::operator<<(char chValue)
 		//// TODO: 여기에 메모리를 다시 늘리고 예외 객체 throw
 		//CExceptClass* Except = new CExceptClass(L"<< CHAR ERROR", m_cpBuffer, m_iMaxSize);
 		//throw Except;
+		return *this;
 	}
 
 	realSize = sizeof(chValue);
@@ -252,6 +251,8 @@ CMessage& CMessage::operator<<(short shValue)
 		//// TODO: 여기에 메모리를 다시 늘리고 예외 객체 throw
 		//CExceptClass* Except = new CExceptClass(L"<< SHORT ERROR", m_cpBuffer, m_iMaxSize);
 		//throw Except;
+		return *this;
+
 	}
 
 	realSize = sizeof(shValue);
@@ -283,6 +284,8 @@ CMessage& CMessage::operator<<(WORD wValue)
 		//// TODO: 여기에 메모리를 다시 늘리고 예외 객체 throw
 		//CExceptClass* Except = new CExceptClass(L"<< WORD ERROR", m_cpBuffer, m_iMaxSize);
 		//throw Except;
+		return *this;
+
 	}
 
 	realSize = sizeof(wValue);
@@ -314,6 +317,8 @@ CMessage& CMessage::operator<<(int iValue)
 		//// TODO: 여기에 메모리를 다시 늘리고 예외 객체 throw
 		//CExceptClass* Except = new CExceptClass(L"<< INT ERROR", m_cpBuffer, m_iMaxSize);
 		//throw Except;
+		return *this;
+
 	}
 
 	realSize = sizeof(iValue);
@@ -345,6 +350,7 @@ CMessage& CMessage::operator<<(DWORD dwValue)
 		//// TODO: 여기에 메모리를 다시 늘리고 예외 객체 throw
 		//CExceptClass* Except = new CExceptClass(L"<< DWORD ERROR", m_cpBuffer, m_iMaxSize);
 		//throw Except;
+
 		return *this;
 	}
 
@@ -439,8 +445,9 @@ CMessage& CMessage::operator<<(double dValue)
 		m_iRear += realSize;
 
 		// TODO: 여기에 메모리를 다시 늘리고 예외 객체 throw
-		CExceptClass* Except = new CExceptClass(L"<< DOUBLE ERROR", m_cpPayloadBuffer, m_iMaxSize);
-		throw Except;
+		//CExceptClass* Except = new CExceptClass(L"<< DOUBLE ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		//throw Except;
+		return *this;
 	}
 
 	realSize = sizeof(double);

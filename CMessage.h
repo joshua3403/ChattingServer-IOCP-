@@ -69,13 +69,6 @@ public:
 		m_bIsEncoded = false;
 	}
 
-	CMessage(int iBufferSize)
-	{
-		m_iMaxSize = iBufferSize;
-		m_iFront = m_iRear = m_iUsingSize = 0;
-		m_cpPayloadBuffer = (char*)malloc(sizeof(char) * m_iMaxSize);
-	}
-
 	virtual	~CMessage()
 	{
 		Release();
@@ -96,7 +89,7 @@ public:
 	}
 
 public:
-	static CLFFreeList_TLS<CMessage> g_PacketPool;
+	static CLFFreeList<CMessage> g_PacketPool;
 
 public:
 
@@ -129,7 +122,7 @@ public:
 	void	Clear(void)
 	{
 		m_iFront = m_iRear = m_iUsingSize = m_lRefCount = 0;
-		ZeroMemory(m_cpHeadPtr, eBUFFER_DEFAULT);
+		m_bIsEncoded = FALSE;
 	}
 
 	void ClearPayload(void)
@@ -167,7 +160,7 @@ public:
 	// Parameters: 없음.
 	// Return: (char *)버퍼 포인터.
 	//////////////////////////////////////////////////////////////////////////
-	char* GetBufferPtr(void) { return m_cpPayloadBuffer; }
+	char* GetBufferPtr(void) { return  m_cpHeadPtr + 5; }
 
 	char* GetLanHeaderPtr(void) { return m_cpHeadPtr + 3; }
 
@@ -203,7 +196,7 @@ public:
 
 	void SetWanMessageHeader(char* header, int len);
 
-	void SetEncodingCode();
+	void SetEncodingCode(int len);
 
 	BOOL SetDecodingCode();
 

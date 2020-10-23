@@ -384,6 +384,8 @@ bool joshua::NetworkLibraryWan::PostSend(st_SESSION* pSession)
 			break;
 		wsabuf[iBufCnt].buf = pPacket->GetWanHeaderPtr();
 		wsabuf[iBufCnt].len = pPacket->GetDataSize() + 5;
+		//st_PACKET_HEADER* header = (st_PACKET_HEADER*)pPacket->GetWanHeaderPtr();
+		//wprintf(L"byCode %x, len %d, randKey %d, CheckSum %d\n", header->byCode, header->wLen, header->byRandKey, header->byCheckSum);
 	}
 	pSession->dwPacketCount = iBufCnt;
 	DWORD dwTransferred = 0;
@@ -551,7 +553,7 @@ void joshua::NetworkLibraryWan::SendPacket(UINT64 id, CMessage* message)
 	return;
 }
 
-BOOL joshua::NetworkLibraryWan::Dissconnect(UINT64 id)
+BOOL joshua::NetworkLibraryWan::Disconnect(UINT64 id)
 {
 	st_SESSION* pSession = SessionReleaseCheck(id);
 	if (pSession == nullptr)

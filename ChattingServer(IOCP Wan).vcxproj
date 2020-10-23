@@ -156,6 +156,7 @@
     <ClInclude Include="CNetWorkLibrary(MemoryPool).h" />
     <ClInclude Include="CNewRingBuffer.h" />
     <ClInclude Include="CommonProtocol.h" />
+    <ClInclude Include="MemoryPool(LockFree).h" />
     <ClInclude Include="Profiler(TLS).h" />
     <ClInclude Include="Queue(LockFree).h" />
     <ClInclude Include="Stack(LockFree).h" />

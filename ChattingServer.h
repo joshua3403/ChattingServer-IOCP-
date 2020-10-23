@@ -2,7 +2,7 @@
 #include "stdafx.h"
 #include "CNetWorkLibrary(MemoryPool).h"
 
-
+#define dfHEARTBEADT_MAXTIME 60000
 
 class ChattingServer : public joshua::NetworkLibraryWan
 {
@@ -27,9 +27,9 @@ class ChattingServer : public joshua::NetworkLibraryWan
 		WCHAR Nick[dfNiCK_LEN];
 		WCHAR ID[dfID_LEN];
 		char SessionKey[dfSESSIONKEY_LEN];
-		SECTORPOS OldSector;
 		SECTORPOS CurrentSector;
 		UINT64 recvTime;
+		WCHAR SendBuffer[1024];
 	}PLAYER;
 
 	enum en_MSG_TYPE
@@ -47,8 +47,8 @@ class ChattingServer : public joshua::NetworkLibraryWan
 	}MSG;
 
 private:
-	CLFFreeList_TLS<PLAYER> m_PlayerPool;
-	CLFFreeList_TLS<MSG> m_MSGPool;
+	CLFFreeList<PLAYER> m_PlayerPool;
+	CLFFreeList<MSG> m_MSGPool;
 
 	BOOL m_bShutdown;
 
@@ -80,8 +80,8 @@ private:
 
 
 	CMessage* Packet_Proc_RES_Login(INT64 acconutNo, BYTE status);
-	CMessage* Packet_Proc_RES_SectorMove(INT64 acconutNo, WORD SecX, WORD SecY);
-	CMessage* Packet_Proc_RES_Chat(PLAYER* player, CMessage* message);
+	CMessage* Packet_Proc_RES_SectorMove(INT64 acconutNo, short SecX, short SecY);
+	CMessage* Packet_Proc_RES_Chat(PLAYER* player, WCHAR* message, WORD len);
 
 	MSG* Make_Message_Create_Client(UINT64 sessionID);
 	MSG* Make_Message_Packet(UINT64 sessionID, CMessage* message);

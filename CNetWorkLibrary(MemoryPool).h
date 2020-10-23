@@ -114,6 +114,8 @@ namespace joshua
 		LONG64 _lAcceptTPS;
 		LONG64 _lAcceptCount;
 
+		UINT64 count;
+
 	private:
 		// 소켓 초기화
 		BOOL InitialNetwork(const WCHAR* ip, DWORD port, BOOL Nagle);
@@ -168,7 +170,7 @@ namespace joshua
 		virtual void OnError(int errorcode, WCHAR*) = 0;
 		 
 		void SendPacket(UINT64 id, CMessage* message);
-		BOOL Dissconnect(UINT64 id);
+		BOOL Disconnect(UINT64 id);
 	public:
 
 		NetworkLibraryWan()
@@ -187,6 +189,7 @@ namespace joshua
 			_lRecvTPS = 0;
 			_lAcceptTPS = 0;
 			_lAcceptCount = 0;
+			count = 0;
 		}
 		
 		~NetworkLibraryWan()

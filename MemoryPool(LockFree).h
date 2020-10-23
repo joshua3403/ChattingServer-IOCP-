@@ -172,7 +172,10 @@ inline DATA* CLFFreeList<DATA>::Alloc(void)
 	st_TOP_NODE temp;
 	LONG64 MaxCount = m_lMaxCount;
 	// 새로 만들어야 한다면
-	if (MaxCount < InterlockedIncrement64(&m_lUseCount))
+	LONG64 lAllocCount = InterlockedIncrement64(&m_lUseCount);
+	LONG64 lUniqueNum = 0;
+
+	if (MaxCount < lAllocCount)
 	{
 		newNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE) + sizeof(DATA));
 		InterlockedIncrement64(&m_lMaxCount);
@@ -183,19 +186,18 @@ inline DATA* CLFFreeList<DATA>::Alloc(void)
 	}
 	else
 	{
+		lUniqueNum = InterlockedIncrement64((LONG64*)&m_lCount);
 		do
 		{
-			temp = *_pTop;
-			CloneTop.pTopNode = temp.pTopNode;
-			CloneTop.lCount = temp.lCount + 1;
-		} while (!InterlockedCompareExchange128((LONG64*)_pTop, CloneTop.lCount, (LONG64)_pTop->pTopNode->stpNextBlock, (LONG64*)&temp));
+			CloneTop.pTopNode = _pTop->pTopNode;
+			CloneTop.lCount = _pTop->lCount;
+		} while (!InterlockedCompareExchange128((LONG64*)_pTop, lUniqueNum, (LONG64)_pTop->pTopNode->stpNextBlock, (LONG64*)&CloneTop));
 
 		newNode = CloneTop.pTopNode;
 	}
 
 	newObject = (DATA*)(newNode + 1);
-
-	if (m_bUsingPlacementNew)
+	if(m_bUsingPlacementNew)
 		new (newObject)DATA;
 
 	return newObject;
@@ -208,14 +210,13 @@ inline bool CLFFreeList<DATA>::Free(DATA* pData)
 	st_TOP_NODE CloneTop;
 	st_TOP_NODE temp;
 
-	//LONG64 newCount = InterlockedIncrement64(&m_lCount);
+	LONG64 newCount = InterlockedIncrement64(&m_lCount);
 	do
 	{
-		temp = *_pTop;
-		CloneTop.pTopNode = temp.pTopNode;
-		CloneTop.lCount = temp.lCount + 1;
+		CloneTop.pTopNode = _pTop->pTopNode;
+		CloneTop.lCount = _pTop->lCount;
 		returnedBlock->stpNextBlock = _pTop->pTopNode;
-	} while (!InterlockedCompareExchange128((LONG64*)_pTop, CloneTop.lCount, (LONG64)returnedBlock, (LONG64*)&temp));
+	} while (!InterlockedCompareExchange128((LONG64*)_pTop, newCount, (LONG64)returnedBlock, (LONG64*)&CloneTop));
 
 	if (m_bUsingPlacementNew)
 		pData->~DATA();
