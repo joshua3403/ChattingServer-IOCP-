@@ -61,10 +61,12 @@ BOOL ChattingServer::DeletePlayer(UINT64 sessionID)
 		if (player->bDisconnected == FALSE)
 		{
 			if(player->CurrentSector.iX != -1 && player->CurrentSector.iY != -1)
-				m_Sector[player->CurrentSector.iY][player->CurrentSector.iX].erase(sessionID);
+				m_Sector[player->CurrentSector.iY][player->CurrentSector.iX].erase(GetSessionID(sessionID));
 
 			m_PlayerPool.Free(player);
 			m_PlayerMap.erase(GetSessionID(sessionID));
+
+			//wprintf(L"AccountNo %lld disconnected, count = %lld\n", player->iAccountNo, m_Count++);
 
 			InterlockedDecrement64(&m_lPlayerCountTps);
 			return TRUE;
@@ -98,7 +100,6 @@ BOOL ChattingServer::Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message)
 		{
 			if ((itor)->second->iAccountNo == iAccountNo && (itor->first != GetSessionID(sessionID)))
 			{
-				wprintf(L"HERE\n");
 				Disconnect(itor->second->SessionID);
 				itor->second->bDisconnected = TRUE;
 				break;
@@ -106,7 +107,7 @@ BOOL ChattingServer::Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message)
 		}
 
 		player->bLogined = TRUE;
-		player->recvTime = GetTickCount64();
+		player->recvTime = timeGetTime();
 		player->iAccountNo = iAccountNo;
 		player->SessionID = sessionID;
 		message->GetData((char*)player->ID, dfID_LEN);
@@ -147,7 +148,7 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 		CRASH();
 		return FALSE;
 	}
-	player->recvTime = GetTickCount64();
+	player->recvTime = timeGetTime();
 
 	(*message) >> iAccountNo;
 
@@ -201,7 +202,7 @@ BOOL ChattingServer::Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message)
 		CRASH();
 		return FALSE;
 	}
-	player->recvTime = GetTickCount64();
+	player->recvTime = timeGetTime();
 
 	if (!player->bLogined || player->bDisconnected)
 	{
@@ -381,12 +382,13 @@ void ChattingServer::Update_Thread()
 		while (!m_MsgQ.isEmpty())
 		{
 			m_MsgQ.Dequeue(newMsg);
+			if (newMsg == nullptr)
+				break;
 			if (CompleteMsg(newMsg) != TRUE)
 			{
 				LOG(L"SERVER", LOG_ERROR, L"CompleteMsg() Error");
 				CRASH();
 			}
-
 			InterlockedIncrement64(&m_lUpdateTps);
 		}
 
@@ -395,7 +397,6 @@ void ChattingServer::Update_Thread()
 		{
 			if ((timeGetTime() - itor->second->recvTime) >= dfHEARTBEADT_MAXTIME && (itor->second->bLogined == TRUE))
 			{
-				OnClientLeave(itor->second->SessionID);
 				Disconnect(itor->second->SessionID);
 			}
 		}
@@ -465,6 +466,7 @@ BOOL ChattingServer::CompletePacket(UINT64 sessionID, CMessage* message)
 		LOG(L"SERVER", LOG_ERROR, L"Packet Error");
 		break;
 	}
+	message->SubRef();
 	return result;
 }
 
@@ -487,6 +489,7 @@ void ChattingServer::SendPacket_Around(PLAYER* player, CMessage* message, BOOL b
 		else
 			SendPacket_SectorOne(CurSector.Around[iCnt].iX, CurSector.Around[iCnt].iY, message);
 	}
+
 }
 
 void ChattingServer::SendPacket_SectorOne(int x, int y, CMessage* message, PLAYER* player)
@@ -590,6 +593,7 @@ bool ChattingServer::OnConnectionRequest(SOCKADDR_IN* sockAddr)
 
 void ChattingServer::OnRecv(UINT64 sessionID, CMessage* message)
 {
+	message->AddRef();
 	MSG* newMSG = Make_Message_Packet(sessionID, message);
 	m_MsgQ.Enqueue(newMSG);
 	SetEvent(m_hEvent);

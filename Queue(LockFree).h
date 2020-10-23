@@ -100,8 +100,7 @@ public:
 			}
 			// 다른 스레드에서 enqeueue중 tail에 노드 삽입 단계를 성공했다면.
 			// 그냥 테일을 옮겨주고 새로 시도 하자.
-			else
-			{
+			else			{
 
 				InterlockedCompareExchange128((LONG64*)m_pTail, newCount, (LONG64)stCloneNode.pTopNode->NextNode, (LONG64*)&stCloneNode);
 			}
