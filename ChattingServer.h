@@ -63,6 +63,7 @@ private:
 	LONG64 m_lUpdateTps;
 	LONG64 m_lPlayerCountTps;
 
+	LONG64 m_Count;
 
 private:
 
