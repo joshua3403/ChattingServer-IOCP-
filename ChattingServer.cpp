@@ -390,15 +390,15 @@ void ChattingServer::Update_Thread()
 			InterlockedIncrement64(&m_lUpdateTps);
 		}
 
-		std::unordered_map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.begin();
-		for (; itor != m_PlayerMap.end(); itor++)
-		{
-			if ((timeGetTime() - itor->second->recvTime) >= dfHEARTBEADT_MAXTIME && (itor->second->bLogined == TRUE))
-			{
-				OnClientLeave(itor->second->SessionID);
-				Disconnect(itor->second->SessionID);
-			}
-		}
+		//std::unordered_map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.begin();
+		//for (; itor != m_PlayerMap.end(); itor++)
+		//{
+		//	if ((timeGetTime() - itor->second->recvTime) >= dfHEARTBEADT_MAXTIME && (itor->second->bLogined == TRUE))
+		//	{
+		//		OnClientLeave(itor->second->SessionID);
+		//		Disconnect(itor->second->SessionID);
+		//	}
+		//}
 	}
 }
 

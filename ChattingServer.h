@@ -2,7 +2,6 @@
 #include "stdafx.h"
 #include "CNetWorkLibrary(MemoryPool).h"
 
-#define dfHEARTBEADT_MAXTIME 60000
 
 class ChattingServer : public joshua::NetworkLibraryWan
 {

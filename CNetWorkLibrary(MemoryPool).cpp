@@ -154,6 +154,7 @@ joshua::st_SESSION* joshua::NetworkLibraryWan::InsertSession(SOCKET sock, SOCKAD
 		pSession->RecvBuffer.ClearBuffer();
 		pSession->lIO->lIOCount = 0;
 		pSession->lIO->bIsReleased = FALSE;
+		pSession->recvTime = timeGetTime();
 		InterlockedIncrement64(&pSession->lIO->lIOCount);
 		memcpy(&pSession->clientaddr, sockaddr, sizeof(SOCKADDR_IN));
 		InterlockedIncrement64(&_dwSessionCount);
@@ -172,6 +173,12 @@ unsigned int __stdcall joshua::NetworkLibraryWan::AcceptThread(LPVOID lpParam)
 unsigned int __stdcall joshua::NetworkLibraryWan::WorkerThread(LPVOID lpParam)
 {
 	((NetworkLibraryWan*)lpParam)->WorkerThread();
+	return 0;
+}
+
+unsigned int __stdcall joshua::NetworkLibraryWan::WorkerThread(LPVOID lpParam)
+{
+	((NetworkLibraryWan*)lpParam)->HeartBeatThread();
 	return 0;
 }
 
@@ -356,6 +363,19 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 		}
 	}
 	return;
+}
+
+void joshua::NetworkLibraryWan::HeartBeatThread(void)
+{
+	for (int i = 0; i < _dwSessionMax; i++)
+	{
+		if ((timeGetTime() - _SessionArray[i].recvTime >= dfHEARTBEADT_MAXTIME))
+		{
+			st_SESSION* pSession = &_SessionArray[i];
+			if (InterlockedDecrement64(&pSession[i].lIO->lIOCount) == 0)
+				SessionRelease(pSession);
+		}
+	}
 }
 
 bool joshua::NetworkLibraryWan::PostSend(st_SESSION* pSession)
@@ -695,6 +715,7 @@ void joshua::NetworkLibraryWan::RecvComplete(st_SESSION* pSession, DWORD dwTrans
 {	// 수신량만큼 RecvQ.MoveWritePos 이동
 	pSession->RecvBuffer.MoveWritePos(dwTransferred);
 	st_PACKET_HEADER packetHeader;
+	pSession->recvTime = timeGetTime();
 
 	// Header는 Payload 길이를 담은 2Byte 크기의 타입
 	while (1)

@@ -10,6 +10,7 @@
 #define READ 3
 #define WRITE 5
 #define MAX_CLIENT_COUNT 1000
+#define dfHEARTBEADT_MAXTIME 60000
 
 // sizeof(UINT64) == 8 Byte == 64 Bit
 // [00000000 00000000 0000] [0000 00000000 00000000 00000000 00000000 00000000]
@@ -53,9 +54,9 @@ namespace joshua
 		OVERLAPPED RecvOverlapped;
 		LONG bIsSend;
 		st_SESSION_FLAG* lIO;
-
 		DWORD dwPacketCount;
 		std::list<CMessage*> lMessageList;
+		UINT64 recvTime;
 
 
 		// SessionID가 0이면 사용하지 않는 세션
@@ -72,6 +73,8 @@ namespace joshua
 			lIO = (st_SESSION_FLAG*)_aligned_malloc(sizeof(st_SESSION_FLAG), 16);
 			lIO->bIsReleased = FALSE;
 			lIO->lIOCount = 0;
+			recvTime = 0;
+
 		}
 
 		~st_SESSION()
@@ -98,6 +101,7 @@ namespace joshua
 
 		// Thread
 		HANDLE _AcceptThread;
+		HANDLE _HeartBeatThread;
 		int _iThreadCount;
 		std::vector<HANDLE> _ThreadVector;
 
@@ -135,9 +139,11 @@ namespace joshua
 		// Accept를 전담할 스레드의 시작 함수
 		static unsigned int WINAPI AcceptThread(LPVOID lpParam);
 		static unsigned int WINAPI WorkerThread(LPVOID lpParam);
+		static unsigned int WINAPI HeartBeatThread(LPVOID lpParam);
 
 		void AcceptThread(void);
 		void WorkerThread(void);
+		void HeartBeatThread(void);
 
 		bool PostSend(st_SESSION* session);
 		bool PostRecv(st_SESSION* session);
