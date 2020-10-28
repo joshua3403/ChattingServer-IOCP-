@@ -77,8 +77,6 @@ public:
 
 		st_TOP_NODE stCloneNode;
 		st_NODE* nextNode;
-		LONG64 Logcount = InterlockedIncrement64(&m_EnLogCount);
-
 		while(true)
 		{
 			LONG64 newCount = InterlockedIncrement64(&m_lTailCount);
@@ -100,8 +98,8 @@ public:
 			}
 			// 다른 스레드에서 enqeueue중 tail에 노드 삽입 단계를 성공했다면.
 			// 그냥 테일을 옮겨주고 새로 시도 하자.
-			else			{
-
+			else			
+			{
 				InterlockedCompareExchange128((LONG64*)m_pTail, newCount, (LONG64)stCloneNode.pTopNode->NextNode, (LONG64*)&stCloneNode);
 			}
 		}
@@ -130,10 +128,13 @@ public:
 			nextNode = stCloneHeadNode.pTopNode->NextNode;
 
 			// 비었다면 이곳도 수정해야 한다.
-			if (m_lSize == 0 && (m_pHead->pTopNode->NextNode == nullptr))
+			if (stCloneHeadNode.pTopNode == stCloneTailNode.pTopNode)
 			{
-				data = nullptr;
-				return FALSE;
+				if (nextNode == nullptr)
+				{
+					data = nullptr;
+					return FALSE;
+				}
 			}
 			else
 			{
@@ -146,9 +147,7 @@ public:
 					LONG64 newCount = InterlockedIncrement64(&m_lTailCount);
 					InterlockedCompareExchange128((LONG64*)m_pTail, newCount, (LONG64)stCloneTailNode.pTopNode->NextNode, (LONG64*)&stCloneTailNode);
 				}
-
-				// 헤드의 next에 노드가 존재한다면
-				if (nextNode != nullptr)
+				else
 				{
 					data = nextNode->data;
 					if (InterlockedCompareExchange128((LONG64*)m_pHead, newHead, (LONG64)stCloneHeadNode.pTopNode->NextNode, (LONG64*)&stCloneHeadNode))
@@ -157,9 +156,7 @@ public:
 						InterlockedDecrement64(&m_lSize);
 						break;
 					}
-
 				}
-		
 			}
 		}
 		return TRUE;

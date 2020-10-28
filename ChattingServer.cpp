@@ -16,7 +16,7 @@ BOOL ChattingServer::CreatePlayer(UINT64 sessionID)
 
 	newPlayer->CurrentSector.iX = -1;
 	newPlayer->CurrentSector.iY = -1;
-	newPlayer->SessionID = 0;
+	newPlayer->SessionID = sessionID;
 	newPlayer->iAccountNo = 0;
 	newPlayer->bDisconnected = FALSE;
 	InsertPlayer(sessionID, newPlayer);
@@ -87,37 +87,27 @@ BOOL ChattingServer::Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"REQ_Login error, sessionID = %lld", sessionID);
 		status = 0;
-		result = FALSE;
 	}
 	else
 	{
-		// TODO 중복 로그인 제거(기존 세션을 유지 할 것인지, 새로 들어온 세션을 유지할 것인지. 기존 플레이어는?)
-		std::map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.begin();
-		for (; itor != m_PlayerMap.end(); itor++)
+		std::unordered_map<UINT64, PLAYER*>::iterator tempPlayer = m_AccountNoMap.find(iAccountNo);
+		if ((tempPlayer != m_AccountNoMap.end()) && (tempPlayer->second->SessionID != sessionID) && (tempPlayer->second->iAccountNo == iAccountNo))
 		{
-			if ((itor)->second->iAccountNo == iAccountNo && (itor->second->SessionID != sessionID))
-			{
-				if (Disconnect(itor->second->SessionID) == FALSE)
-				{
-					itor->second->bDisconnected = TRUE;
-					if (itor->second->CurrentSector.iX != -1 && itor->second->CurrentSector.iY != -1)
-						ErasePlayerInSector(itor->second->SessionID, itor->second->CurrentSector.iX, itor->second->CurrentSector.iY);
+			Disconnect(tempPlayer->second->SessionID);
+			//if (tempPlayer->second->CurrentSector.iX != -1 && tempPlayer->second->CurrentSector.iY != -1)
+			//	ErasePlayerInSector(tempPlayer->second->SessionID, tempPlayer->second->CurrentSector.iX, tempPlayer->second->CurrentSector.iY);
 
-					itor->second->iAccountNo = 0;
-					ErasePlayer(itor->second->SessionID);
-					m_AccountNoMap.erase(itor->second->iAccountNo);
-					m_PlayerPool.Free(itor->second);
+			//tempPlayer->second->iAccountNo = 0;
+			//ErasePlayer(tempPlayer->second->SessionID);
+			//m_AccountNoMap.erase(tempPlayer->second->iAccountNo);
+			//m_PlayerPool.Free(tempPlayer->second);
 
-					InterlockedDecrement64(&m_lPlayerCountTps);
-				}
-				break;
-			}
+			InterlockedDecrement64(&m_lPlayerCountTps);
 		}
 
 		player->bLogined = TRUE;
 		player->recvTime = timeGetTime();
 		player->iAccountNo = iAccountNo;
-		player->SessionID = sessionID;
 		message->GetData((char*)player->ID, dfID_LEN);
 		message->GetData((char*)player->Nick, dfNiCK_LEN);
 
@@ -284,7 +274,7 @@ ChattingServer::MSG* ChattingServer::Make_Message_Create_Client(UINT64 sessionID
 {
 	MSG* newMSG = m_MSGPool.Alloc();
 	newMSG->eType = en_MSG_CONNECTION;
-	newMSG->SessionID = GetSessionID(sessionID);
+	newMSG->SessionID = sessionID;
 	newMSG->pPacket = nullptr;
 	return newMSG;
 }
@@ -390,8 +380,7 @@ void ChattingServer::Update_Thread()
 ChattingServer::PLAYER* ChattingServer::FindPlayer(UINT64 SessionID)
 {
 	PLAYER* player = nullptr;
-	UINT ID = GetSessionID(SessionID);
-	std::map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.find(ID);
+	std::map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.find(SessionID);
 
 	if (itor != m_PlayerMap.end())
 	{
@@ -495,12 +484,12 @@ void ChattingServer::HeartBeat()
 
 void ChattingServer::InsertPlayer(UINT64 sessionID, PLAYER* player)
 {
-	m_PlayerMap.insert(std::make_pair(GetSessionID(sessionID), player));
+	m_PlayerMap.insert(std::make_pair(sessionID, player));
 }
 
 void ChattingServer::ErasePlayer(UINT64 sessionID)
 {
-	m_PlayerMap.erase(GetSessionID(sessionID));
+	m_PlayerMap.erase(sessionID);
 }
 
 void ChattingServer::InsertPlayerInSector(PLAYER* player, WORD SecX, WORD SecY)

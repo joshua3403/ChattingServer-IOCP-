@@ -122,7 +122,6 @@ bool GetNode(WCHAR* szName, NODE** outNode)
 bool ProfilingEnd(WCHAR* szName)
 {
 	LARGE_INTEGER liEndTime;
-	DWORD dwIndex;
 	NODE* targetNode;
 	LARGE_INTEGER lPlayTime;
 	QueryPerformanceCounter(&liEndTime);

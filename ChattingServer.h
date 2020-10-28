@@ -52,7 +52,7 @@ private:
 	BOOL m_bShutdown;
 
 	std::map<UINT64, PLAYER*> m_PlayerMap;
-	std::map<UINT64, PLAYER*> m_AccountNoMap;
+	std::unordered_map<UINT64, PLAYER*> m_AccountNoMap;
 
 	// 전체 섹터와 섹터에 존재하는 클라이언트를 리스트로 관리할 자료구조
 	std::unordered_map<UINT64, PLAYER*> m_Sector[dfSECTOR_MAX_Y][dfSECTOR_MAX_X];

@@ -169,7 +169,6 @@ inline DATA* CLFFreeList<DATA>::Alloc(void)
 	DATA* newObject = nullptr;
 	st_BLOCK_NODE* newNode = nullptr;
 	st_TOP_NODE CloneTop;
-	st_TOP_NODE temp;
 	LONG64 MaxCount = m_lMaxCount;
 	// 새로 만들어야 한다면
 	LONG64 lAllocCount = InterlockedIncrement64(&m_lUseCount);
@@ -208,7 +207,6 @@ inline bool CLFFreeList<DATA>::Free(DATA* pData)
 {
 	st_BLOCK_NODE* returnedBlock = ((st_BLOCK_NODE*)pData) - 1;
 	st_TOP_NODE CloneTop;
-	st_TOP_NODE temp;
 
 	LONG64 newCount = InterlockedIncrement64(&m_lCount);
 	do

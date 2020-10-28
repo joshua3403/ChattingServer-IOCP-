@@ -251,6 +251,8 @@ void joshua::NetworkLibraryWan::AcceptThread(void)
 			LOG(L"SYSTEM", LOG_ERROR, L"AcceptThread() - CreateIoCompletionPort() failed : %d", WSAGetLastError());
 			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 			{
+				if (pSession->lIO->lIOCount == -1)
+					CRASH();
 				//DisconnectSession(pSession);
 				SessionRelease(pSession);
 				continue;
@@ -264,6 +266,8 @@ void joshua::NetworkLibraryWan::AcceptThread(void)
 
 		if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 		{
+			if (pSession->lIO->lIOCount == -1)
+				CRASH();
 			SessionRelease(pSession);
 		}
 	}
@@ -315,7 +319,7 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 			{
 				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 				{
-					if (pSession->lIO->lIOCount < 0)
+					if (pSession->lIO->lIOCount == -1)
 						CRASH();
 					SessionRelease(pSession);
 				}
@@ -335,7 +339,7 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 
 				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 				{
-					if (pSession->lIO->lIOCount < 0)
+					if (pSession->lIO->lIOCount == -1)
 						CRASH();
 					SessionRelease(pSession);
 				}
@@ -347,6 +351,8 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 			{
 				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 				{
+					if (pSession->lIO->lIOCount == -1)
+						CRASH();
 					SessionRelease(pSession);
 				}
 				continue;
@@ -354,26 +360,27 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 			}
 			else
 			{
-				LOG(L"SYSTEM", LOG_ERROR, L"GetQueuedCompletionStatus() failed %d", GetLastError());
-				PostQueuedCompletionStatus(_hCP, 0, 0, 0);	// GQCS 에러 시 조치를 취할만한게 없으므로 종료
-				break;
+				if (GetLastError() == ERROR_NETNAME_DELETED)
+				{
+					if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+					{
+						if (pSession->lIO->lIOCount == -1)
+							CRASH();
+						SessionRelease(pSession);
+						continue;
+					}
+				}
+				else
+				{
+					LOG(L"SYSTEM", LOG_ERROR, L"GetQueuedCompletionStatus() failed %d", GetLastError());
+					PostQueuedCompletionStatus(_hCP, 0, 0, 0);	// GQCS 에러 시 조치를 취할만한게 없으므로 종료
+					break;
+				}
+
 			}
 		}
 	}
 	return;
-}
-
-void joshua::NetworkLibraryWan::HeartBeatThread(void)
-{
-	for (int i = 0; i < _dwSessionMax; i++)
-	{
-		if ((timeGetTime() - _SessionArray[i].recvTime >= dfHEARTBEADT_MAXTIME))
-		{
-			st_SESSION* pSession = &_SessionArray[i];
-			if (InterlockedDecrement64(&pSession[i].lIO->lIOCount) == 0)
-				SessionRelease(pSession);
-		}
-	}
 }
 
 bool joshua::NetworkLibraryWan::PostSend(st_SESSION* pSession)
@@ -421,7 +428,11 @@ bool joshua::NetworkLibraryWan::PostSend(st_SESSION* pSession)
 
 			//DisconnectSession(pSession);
 			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+			{
+				if (pSession->lIO->lIOCount == -1)
+					CRASH();
 				SessionRelease(pSession);
+			}
 
 			return false;
 		}
@@ -467,7 +478,11 @@ bool joshua::NetworkLibraryWan::PostRecv(st_SESSION* pSession)
 
 			//DisconnectSession(pSession);
 			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+			{
+				if (pSession->lIO->lIOCount == -1)
+					CRASH();
 				SessionRelease(pSession);
+			}
 
 			return false;
 		}
@@ -519,10 +534,15 @@ void joshua::NetworkLibraryWan::SessionRelease(st_SESSION* pSession)
 		return;
 
 	st_SESSION_FLAG temp(0, FALSE);
-	if (!InterlockedCompareExchange128((LONG64*)pSession->lIO, TRUE, 0, (LONG64*)&temp))
+	if (InterlockedCompareExchange128((LONG64*)pSession->lIO, TRUE, 0, (LONG64*)&temp) == FALSE)
 		return;
 
 	DisconnectSession(pSession);
+
+	if (pSession->SessionID == -1)
+	{
+		return;
+	}
 
 	OnClientLeave(pSession->SessionID);
 
@@ -568,7 +588,11 @@ void joshua::NetworkLibraryWan::SendPacket(UINT64 id, CMessage* message)
 
 
 	if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+	{
+		if (pSession->lIO->lIOCount == -1)
+			CRASH();
 		SessionRelease(pSession);
+	}
 
 	return;
 }
@@ -582,7 +606,11 @@ BOOL joshua::NetworkLibraryWan::Disconnect(UINT64 id)
 	DisconnectSocket(pSession->socket);
 	
 	if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+	{
+		if (pSession->lIO->lIOCount == -1)
+			CRASH();
 		SessionRelease(pSession);
+	}
 
 
 	return TRUE;
@@ -667,15 +695,15 @@ joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessi
 	int nIndex = GetSessionIndex(iSessionID);
 	st_SESSION* pSession = &_SessionArray[nIndex];
 
-	// 이미 해제 되었다면(이미 해제 코드를 탔다면)
-	if (pSession->lIO->bIsReleased == TRUE)
-		return nullptr;
-
 	// ioCount가 증가해서 1이라는 뜻은 어디선가 이 세션에 대한 release가 진행되고 있다는 뜻.
 	if (InterlockedIncrement64((LONG64*)&pSession->lIO->lIOCount) == 1)
 	{
 		if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+		{
+			if (pSession->lIO->lIOCount == -1)
+				CRASH();
 			SessionRelease(pSession);
+		}
 
 		return nullptr;
 	}
@@ -685,21 +713,28 @@ joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessi
 	{
 		if (InterlockedDecrement64((LONG64*)&pSession->lIO->lIOCount) == 0)
 		{
+			if (pSession->lIO->lIOCount == -1)
+				CRASH();
 			SessionRelease(pSession);
 		}
 		return nullptr;
 	}
 
-	if (pSession->lIO->bIsReleased == FALSE)
-		return pSession;
-
-	if (InterlockedDecrement64((LONG64*)&pSession->lIO->lIOCount) == 0)
-		SessionRelease(pSession);
+	if (InterlockedCompareExchange64((LONG64*)&pSession->lIO->bIsReleased, TRUE, TRUE) == TRUE)
+	{
+		if (InterlockedDecrement64((LONG64*)&pSession->lIO->lIOCount) == 0)
+		{
+			if (pSession->lIO->lIOCount == -1)
+				CRASH();
+			SessionRelease(pSession);
+		}
+		return nullptr;
+	}
 
 	//if (pSession == nullptr)
 	//	return nullptr;
 
-	return nullptr;
+	return pSession;
 }
 
 void joshua::NetworkLibraryWan::RecvComplete(st_SESSION* pSession, DWORD dwTransferred)

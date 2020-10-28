@@ -31,7 +31,7 @@ namespace joshua
 	struct st_SESSION_FLAG
 	{
 
-		st_SESSION_FLAG(UINT64 ioCount, UINT64 isReleased)
+		st_SESSION_FLAG(LONG64 ioCount, LONG64 isReleased)
 		{
 			lIOCount = ioCount;
 			bIsReleased = isReleased;
@@ -139,11 +139,9 @@ namespace joshua
 		// Accept를 전담할 스레드의 시작 함수
 		static unsigned int WINAPI AcceptThread(LPVOID lpParam);
 		static unsigned int WINAPI WorkerThread(LPVOID lpParam);
-		static unsigned int WINAPI HeartBeatThread(LPVOID lpParam);
 
 		void AcceptThread(void);
 		void WorkerThread(void);
-		void HeartBeatThread(void);
 
 		bool PostSend(st_SESSION* session);
 		bool PostRecv(st_SESSION* session);
