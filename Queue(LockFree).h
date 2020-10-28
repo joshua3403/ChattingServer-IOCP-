@@ -27,7 +27,6 @@ private:
 	CLFFreeList<st_NODE>* m_MemoryPool;
 
 	st_NODE* m_pDummyNode;
-	LONG64 m_EnLogCount;
 
 	LONG64 m_lHeadCount;
 	LONG64 m_lTailCount;
@@ -35,7 +34,6 @@ private:
 public:
 	inline CQueue()
 	{
-		m_EnLogCount = 0;
 		m_lSize = m_lHeadCount = m_lTailCount= 0;
 		m_MemoryPool = new CLFFreeList<st_NODE>(0, FALSE);
 
@@ -113,7 +111,6 @@ public:
 
 		LONG64 newHead = InterlockedIncrement64(&m_lHeadCount);
 
-		LONG64 Logcount = InterlockedIncrement64(&m_EnLogCount);
 		while (true)
 		{
 			// 헤드 저장
@@ -206,7 +203,6 @@ public:
 		{
 			if ((m_pHead->pTopNode) == (m_pTail->pTopNode))
 			{
-				if (nullptr == m_pHead->pTopNode->NextNode)
 					return true;
 			}
 		}

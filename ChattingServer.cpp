@@ -357,6 +357,10 @@ void ChattingServer::Update_Thread()
 		while (!m_MsgQ.isEmpty())
 		{
 			m_MsgQ.Dequeue(newMsg);
+			if (newMsg == nullptr)
+				continue;
+			if (newMsg == nullptr)
+				continue;
 			if (CompleteMsg(newMsg) != TRUE)
 			{
 				LOG(L"SERVER", LOG_ERROR, L"CompleteMsg() Error");
