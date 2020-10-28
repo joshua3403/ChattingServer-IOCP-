@@ -110,7 +110,7 @@ public:
 	{
 		CMessage* newMessage = g_PacketPool.Alloc();
 		newMessage->Clear();
-		InterlockedIncrement(&newMessage->m_lRefCount);
+		newMessage->AddRef();
 		return newMessage;
 	}
 	//////////////////////////////////////////////////////////////////////////
@@ -196,7 +196,7 @@ public:
 
 	void SetWanMessageHeader(char* header, int len);
 
-	void SetEncodingCode(int len);
+	void SetEncodingCode();
 
 	BOOL SetDecodingCode();
 

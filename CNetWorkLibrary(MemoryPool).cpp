@@ -176,12 +176,6 @@ unsigned int __stdcall joshua::NetworkLibraryWan::WorkerThread(LPVOID lpParam)
 	return 0;
 }
 
-unsigned int __stdcall joshua::NetworkLibraryWan::WorkerThread(LPVOID lpParam)
-{
-	((NetworkLibraryWan*)lpParam)->HeartBeatThread();
-	return 0;
-}
-
 void joshua::NetworkLibraryWan::AcceptThread(void)
 {
 	BOOL bFlag = false;
@@ -321,6 +315,8 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 			{
 				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 				{
+					if (pSession->lIO->lIOCount < 0)
+						CRASH();
 					SessionRelease(pSession);
 				}
 				continue;
@@ -339,6 +335,8 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 
 				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 				{
+					if (pSession->lIO->lIOCount < 0)
+						CRASH();
 					SessionRelease(pSession);
 				}
 			}
@@ -517,6 +515,9 @@ BOOL joshua::NetworkLibraryWan::Start(DWORD port, BOOL nagle, const WCHAR* ip, D
 
 void joshua::NetworkLibraryWan::SessionRelease(st_SESSION* pSession)
 {
+	if (pSession->lIO->bIsReleased == TRUE)
+		return;
+
 	st_SESSION_FLAG temp(0, FALSE);
 	if (!InterlockedCompareExchange128((LONG64*)pSession->lIO, TRUE, 0, (LONG64*)&temp))
 		return;
@@ -565,7 +566,6 @@ void joshua::NetworkLibraryWan::SendPacket(UINT64 id, CMessage* message)
 
 	PostSend(pSession);
 
-	InterlockedIncrement64(&_lSendTPS);
 
 	if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 		SessionRelease(pSession);
@@ -666,22 +666,13 @@ joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessi
 	// multi-thread 환경에서 release, connectm send, accept 등이 동시에 발생할 수 있음을 생각해야 한다.
 	int nIndex = GetSessionIndex(iSessionID);
 	st_SESSION* pSession = &_SessionArray[nIndex];
-	//st_SESSION* pSession = nullptr;
-	//for (int i = 0; i < MAX_CLIENT_COUNT; i++)
-	//{
-	//	if (_SessionArray[i].SessionID == iSessionID)
-	//	{
-	//		pSession = &_SessionArray[i];
-	//		break;
-	//	}
-	//}
 
 	// 이미 해제 되었다면(이미 해제 코드를 탔다면)
 	if (pSession->lIO->bIsReleased == TRUE)
 		return nullptr;
 
 	// ioCount가 증가해서 1이라는 뜻은 어디선가 이 세션에 대한 release가 진행되고 있다는 뜻.
-	if (InterlockedIncrement64(&pSession->lIO->lIOCount) == 1)
+	if (InterlockedIncrement64((LONG64*)&pSession->lIO->lIOCount) == 1)
 	{
 		if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 			SessionRelease(pSession);
@@ -692,7 +683,7 @@ joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessi
 	// 세션을 검색해서 얻었으나 이미 다른 세션으로 대체된 경우
 	if (pSession->SessionID != iSessionID)
 	{
-		if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+		if (InterlockedDecrement64((LONG64*)&pSession->lIO->lIOCount) == 0)
 		{
 			SessionRelease(pSession);
 		}
@@ -702,7 +693,7 @@ joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessi
 	if (pSession->lIO->bIsReleased == FALSE)
 		return pSession;
 
-	if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+	if (InterlockedDecrement64((LONG64*)&pSession->lIO->lIOCount) == 0)
 		SessionRelease(pSession);
 
 	//if (pSession == nullptr)
@@ -740,7 +731,6 @@ void joshua::NetworkLibraryWan::RecvComplete(st_SESSION* pSession, DWORD dwTrans
 
 
 		CMessage* pPacket = CMessage::Alloc();
-		pPacket->Clear();
 		//pPacket->PutData((char*)&packetHeader, sizeof(packetHeader));
 
 		pPacket->SetWanMessageHeader((char*)&packetHeader, sizeof(packetHeader));
@@ -775,6 +765,7 @@ void joshua::NetworkLibraryWan::RecvComplete(st_SESSION* pSession, DWORD dwTrans
 
 		if (pPacket->SetDecodingCode() == FALSE)
 		{
+			pPacket->SubRef();
 			LOG(L"SYSTEM", LOG_WARNNING, L"Decoding Error! SessionID %lld, Packet %x", pSession->SessionID, pPacket->GetWanHeaderPtr());
 			DisconnectSession(pSession);
 			break;
@@ -797,6 +788,7 @@ void joshua::NetworkLibraryWan::SendComplete(st_SESSION* pSession, DWORD dwTrans
 	{
 		if (pSession->SendBuffer.Dequeue(pPacket))
 		{
+			InterlockedIncrement64(&_lSendTPS);
 			pPacket->SubRef();
 		}
 	}

@@ -50,7 +50,7 @@ void CMessage::SetWanMessageHeader(char* header, int len)
 	memcpy(m_cpHeadPtr, header, len);
 }
 
-void CMessage::SetEncodingCode(int len)
+void CMessage::SetEncodingCode()
 {
 	if (m_bIsEncoded)
 		return;

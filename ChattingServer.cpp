@@ -8,7 +8,7 @@ BOOL ChattingServer::CreatePlayer(UINT64 sessionID)
 		return FALSE;
 
 	newPlayer->bLogined = FALSE;
-	newPlayer->recvTime = 0;
+	newPlayer->recvTime = timeGetTime();
 
 	memset(newPlayer->Nick, 0, dfID_LEN);
 	memset(newPlayer->ID, 0, dfNiCK_LEN);
@@ -48,23 +48,22 @@ BOOL ChattingServer::SectorUpdate(PLAYER* player, WORD SecX, WORD SecY)
 
 BOOL ChattingServer::DeletePlayer(UINT64 sessionID)
 {
-
 	PLAYER* player = FindPlayer(sessionID);
 	if (player == nullptr)
 	{
-		LOG(L"SERVER", LOG_ERROR, L"DeletePlayer() error, sessionID = %lld", sessionID);
-		CRASH();
-		return FALSE;
+		return TRUE;
 	}
 	else
 	{
 		if (player->bDisconnected == FALSE)
 		{
-			if(player->CurrentSector.iX != -1 && player->CurrentSector.iY != -1)
-				m_Sector[player->CurrentSector.iY][player->CurrentSector.iX].erase(sessionID);
-
+			if (player->CurrentSector.iX != -1 && player->CurrentSector.iY != -1)
+				ErasePlayerInSector(player->SessionID, player->CurrentSector.iX, player->CurrentSector.iY);
+			
+			player->iAccountNo = 0;
+			ErasePlayer(sessionID);
+			m_AccountNoMap.erase(player->iAccountNo);
 			m_PlayerPool.Free(player);
-			m_PlayerMap.erase(GetSessionID(sessionID));
 
 			InterlockedDecrement64(&m_lPlayerCountTps);
 			return TRUE;
@@ -93,33 +92,41 @@ BOOL ChattingServer::Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message)
 	else
 	{
 		// TODO 중복 로그인 제거(기존 세션을 유지 할 것인지, 새로 들어온 세션을 유지할 것인지. 기존 플레이어는?)
-		std::unordered_map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.begin();
+		std::map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.begin();
 		for (; itor != m_PlayerMap.end(); itor++)
 		{
-			if ((itor)->second->iAccountNo == iAccountNo && (itor->first != GetSessionID(sessionID)))
+			if ((itor)->second->iAccountNo == iAccountNo && (itor->second->SessionID != sessionID))
 			{
-				wprintf(L"HERE\n");
-				Disconnect(itor->second->SessionID);
-				itor->second->bDisconnected = TRUE;
+				if (Disconnect(itor->second->SessionID) == FALSE)
+				{
+					itor->second->bDisconnected = TRUE;
+					if (itor->second->CurrentSector.iX != -1 && itor->second->CurrentSector.iY != -1)
+						ErasePlayerInSector(itor->second->SessionID, itor->second->CurrentSector.iX, itor->second->CurrentSector.iY);
+
+					itor->second->iAccountNo = 0;
+					ErasePlayer(itor->second->SessionID);
+					m_AccountNoMap.erase(itor->second->iAccountNo);
+					m_PlayerPool.Free(itor->second);
+
+					InterlockedDecrement64(&m_lPlayerCountTps);
+				}
 				break;
 			}
 		}
 
 		player->bLogined = TRUE;
-		player->recvTime = GetTickCount64();
+		player->recvTime = timeGetTime();
 		player->iAccountNo = iAccountNo;
 		player->SessionID = sessionID;
 		message->GetData((char*)player->ID, dfID_LEN);
 		message->GetData((char*)player->Nick, dfNiCK_LEN);
 
 		message->GetData(player->SessionKey, dfSESSIONKEY_LEN);
-
+		m_AccountNoMap.insert(std::make_pair(player->iAccountNo, player));
 		InterlockedIncrement64(&m_lPlayerCountTps);
 	}
 
 	pPacket = Packet_Proc_RES_Login(player->iAccountNo, status);
-	//ZeroMemory(player->SendBuffer, 1024 * 2);
-	//memcpy(player->SendBuffer, pPacket->GetWanHeaderPtr(), pPacket->GetDataSize() + 5);
 	SendPacket_Unicast(sessionID, pPacket);
 	pPacket->SubRef();
 
@@ -147,7 +154,7 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 		CRASH();
 		return FALSE;
 	}
-	player->recvTime = GetTickCount64();
+	player->recvTime = timeGetTime();
 
 	(*message) >> iAccountNo;
 
@@ -170,8 +177,6 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 	}
 
 	pPacket = Packet_Proc_RES_SectorMove(iAccountNo, wSectorX, wSectorY);
-	//ZeroMemory(player->SendBuffer, 1024 * 2);
-	//memcpy(player->SendBuffer, pPacket->GetWanHeaderPtr(), pPacket->GetDataSize() + 5);
 	SendPacket_Unicast(sessionID, pPacket);
 
 	pPacket->SubRef();
@@ -201,7 +206,7 @@ BOOL ChattingServer::Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message)
 		CRASH();
 		return FALSE;
 	}
-	player->recvTime = GetTickCount64();
+	player->recvTime = timeGetTime();
 
 	if (!player->bLogined || player->bDisconnected)
 	{
@@ -216,8 +221,6 @@ BOOL ChattingServer::Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message)
 	message->GetData((char*)szMessage, len);
 
 	pPacket = Packet_Proc_RES_Chat(player, szMessage, len);
-	//ZeroMemory(player->SendBuffer, 1024 * 2);
-	//memcpy(player->SendBuffer, pPacket->GetWanHeaderPtr(), pPacket->GetDataSize() + 5);
 	SendPacket_Around(player, pPacket, TRUE);
 
 	pPacket->SubRef();
@@ -225,7 +228,7 @@ BOOL ChattingServer::Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message)
 	return TRUE;
 }
 
-BOOL ChattingServer::Packet_Proc_REQ_HEARBEAT(UINT64 sessionID)
+BOOL ChattingServer::Packet_Proc_REQ_HEARTBEAT(UINT64 sessionID)
 {
 	PLAYER* player = FindPlayer(sessionID);
 	if (player == nullptr)
@@ -235,7 +238,7 @@ BOOL ChattingServer::Packet_Proc_REQ_HEARBEAT(UINT64 sessionID)
 		return FALSE;
 	}
 
-	player->recvTime = GetTickCount64();
+	player->recvTime = timeGetTime();
 
 	return TRUE;
 }
@@ -247,7 +250,7 @@ CMessage* ChattingServer::Packet_Proc_RES_Login(INT64 accountNo, BYTE status)
 	(*pPacket) << status;
 	(*pPacket) << accountNo;
 
-	pPacket->SetEncodingCode(11);
+	pPacket->SetEncodingCode();
 	return pPacket;
 }
 
@@ -259,17 +262,7 @@ CMessage* ChattingServer::Packet_Proc_RES_SectorMove(INT64 accountNo, short SecX
 	(*pPacket) << (INT64)accountNo;
 	(*pPacket) << (WORD)SecX;
 	(*pPacket) << (WORD)SecY;
-
-
-	//wprintf(L"accountno : %lld, x : %d, y : %d\n", accountNo, SecX, SecY);
-
-	pPacket->SetEncodingCode(14);
-	//st_PACKET_HEADER* header = (st_PACKET_HEADER*)pPacket->GetWanHeaderPtr();
-	//if (header->byCode != dfPACKET_CODE)
-	//{
-	//	wprintf(L"Here\n");
-	//}
-	//wprintf(L"byCode %x, len %d, randKey %d, CheckSum %d\n", header->byCode, header->wLen, header->byRandKey, header->byCheckSum);
+	pPacket->SetEncodingCode();
 	return pPacket;
 }
 
@@ -283,15 +276,7 @@ CMessage* ChattingServer::Packet_Proc_RES_Chat(PLAYER* player, WCHAR* message, W
 	(*pPacket) << len;
 	pPacket->PutData((char*)message, len);
 	message[len] = L'\0';
-	//wprintf(L"accountno : %lld, id : %s, nick : %s, len : %d, message : %s\n", player->iAccountNo, player->ID, player->Nick, len, message);
-	pPacket->SetEncodingCode(92 + len);
-
-	//st_PACKET_HEADER* header = (st_PACKET_HEADER *)pPacket->GetWanHeaderPtr();
-	//if (header->byCode != dfPACKET_CODE)
-	//{
-	//	wprintf(L"Here\n");
-	//}
-	//wprintf(L"byCode %x, len %d, randKey %d, CheckSum %d\n", header->byCode, header->wLen, header->byRandKey, header->byCheckSum);
+	pPacket->SetEncodingCode();
 	return pPacket;
 }
 
@@ -307,6 +292,7 @@ ChattingServer::MSG* ChattingServer::Make_Message_Create_Client(UINT64 sessionID
 ChattingServer::MSG* ChattingServer::Make_Message_Packet(UINT64 sessionID, CMessage* message)
 {
 	MSG* newMSG = m_MSGPool.Alloc();
+	message->AddRef();
 	newMSG->eType = en_MSG_PACKET;
 	newMSG->SessionID = sessionID;
 	newMSG->pPacket = message;
@@ -363,7 +349,7 @@ void ChattingServer::Monitoring_Update()
 				CCrashDump::Crash();
 			}
 		}
-
+		HeartBeat();
 		Sleep(999);
 	}
 }
@@ -390,15 +376,14 @@ void ChattingServer::Update_Thread()
 			InterlockedIncrement64(&m_lUpdateTps);
 		}
 
-		//std::unordered_map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.begin();
-		//for (; itor != m_PlayerMap.end(); itor++)
-		//{
-		//	if ((timeGetTime() - itor->second->recvTime) >= dfHEARTBEADT_MAXTIME && (itor->second->bLogined == TRUE))
-		//	{
-		//		OnClientLeave(itor->second->SessionID);
-		//		Disconnect(itor->second->SessionID);
-		//	}
-		//}
+		std::map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.begin();
+		for (; itor != m_PlayerMap.end(); itor++)
+		{
+			if ((timeGetTime() - itor->second->recvTime) >= dfHEARTBEADT_MAXTIME)
+			{
+				Disconnect(itor->second->SessionID);
+			}
+		}
 	}
 }
 
@@ -406,7 +391,7 @@ ChattingServer::PLAYER* ChattingServer::FindPlayer(UINT64 SessionID)
 {
 	PLAYER* player = nullptr;
 	UINT ID = GetSessionID(SessionID);
-	std::unordered_map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.find(ID);
+	std::map<UINT64, PLAYER*>::iterator itor = m_PlayerMap.find(ID);
 
 	if (itor != m_PlayerMap.end())
 	{
@@ -457,7 +442,7 @@ BOOL ChattingServer::CompletePacket(UINT64 sessionID, CMessage* message)
 		result = Packet_Proc_REQ_Chat(sessionID, message);
 		break;
 	case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
-		result = Packet_Proc_REQ_HEARBEAT(sessionID);
+		result = Packet_Proc_REQ_HEARTBEAT(sessionID);
 		break;
 	default:
 		Disconnect(sessionID);
@@ -465,6 +450,8 @@ BOOL ChattingServer::CompletePacket(UINT64 sessionID, CMessage* message)
 		LOG(L"SERVER", LOG_ERROR, L"Packet Error");
 		break;
 	}
+	message->SubRef();
+
 	return result;
 }
 
@@ -501,6 +488,11 @@ void ChattingServer::SendPacket_SectorOne(int x, int y, CMessage* message, PLAYE
 	}
 }
 
+void ChattingServer::HeartBeat()
+{
+	SetEvent(m_hEvent);
+}
+
 void ChattingServer::InsertPlayer(UINT64 sessionID, PLAYER* player)
 {
 	m_PlayerMap.insert(std::make_pair(GetSessionID(sessionID), player));
@@ -508,7 +500,7 @@ void ChattingServer::InsertPlayer(UINT64 sessionID, PLAYER* player)
 
 void ChattingServer::ErasePlayer(UINT64 sessionID)
 {
-	m_PlayerMap.erase(sessionID);
+	m_PlayerMap.erase(GetSessionID(sessionID));
 }
 
 void ChattingServer::InsertPlayerInSector(PLAYER* player, WORD SecX, WORD SecY)
