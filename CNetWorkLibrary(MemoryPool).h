@@ -58,6 +58,8 @@ namespace joshua
 		std::list<CMessage*> lMessageList;
 		UINT64 recvTime;
 
+		LONG64 status;
+
 
 		// SessionID가 0이면 사용하지 않는 세션
 		st_SESSION()
@@ -74,7 +76,7 @@ namespace joshua
 			lIO->bIsReleased = FALSE;
 			lIO->lIOCount = 0;
 			recvTime = 0;
-
+			status = -1;
 		}
 
 		~st_SESSION()
@@ -110,6 +112,8 @@ namespace joshua
 		UINT64 _dwSessionID;
 		st_SESSION* _SessionArray;
 		std::stack<UINT64> _ArrayIndex;
+		std::map<SOCKET, UINT64> decodeErrorSock;
+		std::map<SOCKET, UINT64> DeleteSock;
 
 		CRITICAL_SECTION _IndexStackCS;
 
@@ -147,7 +151,7 @@ namespace joshua
 		bool PostRecv(st_SESSION* session);
 
 		void SessionRelease(st_SESSION* session);
-		void DisconnectSocket(SOCKET sock);
+		SOCKET DisconnectSocket(SOCKET sock);
 		void DisconnectSession(st_SESSION* pSession);
 		joshua::st_SESSION* SessionReleaseCheck(UINT64 iSessionID);
 

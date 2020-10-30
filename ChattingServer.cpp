@@ -19,6 +19,7 @@ BOOL ChattingServer::CreatePlayer(UINT64 sessionID)
 	newPlayer->SessionID = sessionID;
 	newPlayer->iAccountNo = 0;
 	newPlayer->bDisconnected = FALSE;
+	newPlayer->LastPacket = 0;
 	InsertPlayer(sessionID, newPlayer);
 
 	return TRUE;
@@ -55,19 +56,18 @@ BOOL ChattingServer::DeletePlayer(UINT64 sessionID)
 	}
 	else
 	{
-		if (player->bDisconnected == FALSE)
-		{
-			if (player->CurrentSector.iX != -1 && player->CurrentSector.iY != -1)
-				ErasePlayerInSector(player->SessionID, player->CurrentSector.iX, player->CurrentSector.iY);
-			
-			player->iAccountNo = 0;
-			ErasePlayer(sessionID);
-			m_AccountNoMap.erase(player->iAccountNo);
-			m_PlayerPool.Free(player);
+		if (player->CurrentSector.iX != -1 && player->CurrentSector.iY != -1)
+			ErasePlayerInSector(player->SessionID, player->CurrentSector.iX, player->CurrentSector.iY);
+		
+		m_AccountNoMap.erase(player->iAccountNo);
+		player->iAccountNo = 0;
+		player->bDisconnected = FALSE;
+		ErasePlayer(sessionID);
+		m_PlayerPool.Free(player);
 
-			InterlockedDecrement64(&m_lPlayerCountTps);
-			return TRUE;
-		}
+		InterlockedDecrement64(&m_lPlayerCountTps);
+		return TRUE;
+
 	}
 	return TRUE;
 }
@@ -87,37 +87,50 @@ BOOL ChattingServer::Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"REQ_Login error, sessionID = %lld", sessionID);
 		status = 0;
+		pPacket = Packet_Proc_RES_Login(iAccountNo, status);
+		SendPacket_Unicast(sessionID, pPacket);
+		Disconnect(sessionID);
+		pPacket->SubRef();
+		return TRUE;
 	}
 	else
 	{
 		std::unordered_map<UINT64, PLAYER*>::iterator tempPlayer = m_AccountNoMap.find(iAccountNo);
 		if ((tempPlayer != m_AccountNoMap.end()) && (tempPlayer->second->SessionID != sessionID) && (tempPlayer->second->iAccountNo == iAccountNo))
 		{
+			tempPlayer->second->bDisconnected = TRUE;
 			Disconnect(tempPlayer->second->SessionID);
 			//if (tempPlayer->second->CurrentSector.iX != -1 && tempPlayer->second->CurrentSector.iY != -1)
 			//	ErasePlayerInSector(tempPlayer->second->SessionID, tempPlayer->second->CurrentSector.iX, tempPlayer->second->CurrentSector.iY);
 
+			//m_AccountNoMap.erase(tempPlayer->second->iAccountNo);
 			//tempPlayer->second->iAccountNo = 0;
 			//ErasePlayer(tempPlayer->second->SessionID);
-			//m_AccountNoMap.erase(tempPlayer->second->iAccountNo);
 			//m_PlayerPool.Free(tempPlayer->second);
 
 			InterlockedDecrement64(&m_lPlayerCountTps);
 		}
-
-		player->bLogined = TRUE;
-		player->recvTime = timeGetTime();
-		player->iAccountNo = iAccountNo;
-		message->GetData((char*)player->ID, dfID_LEN);
-		message->GetData((char*)player->Nick, dfNiCK_LEN);
-
-		message->GetData(player->SessionKey, dfSESSIONKEY_LEN);
-		m_AccountNoMap.insert(std::make_pair(player->iAccountNo, player));
-		InterlockedIncrement64(&m_lPlayerCountTps);
 	}
 
-	pPacket = Packet_Proc_RES_Login(player->iAccountNo, status);
-	SendPacket_Unicast(sessionID, pPacket);
+	// 삭제될 예정인 플레이어
+	if (player->bDisconnected == TRUE)
+	{
+		return TRUE;
+	}
+
+	player->bLogined = TRUE;
+	player->recvTime = timeGetTime();
+	player->iAccountNo = iAccountNo;
+	message->GetData((char*)player->ID, dfID_LEN);
+	message->GetData((char*)player->Nick, dfNiCK_LEN);
+	player->LastPacket = 1;
+
+	message->GetData(player->SessionKey, dfSESSIONKEY_LEN);
+	m_AccountNoMap.insert(std::make_pair(iAccountNo, player));
+	InterlockedIncrement64(&m_lPlayerCountTps);
+
+	pPacket = Packet_Proc_RES_Login(iAccountNo, status);
+	SendPacket_Unicast(player->SessionID, pPacket);
 	pPacket->SubRef();
 
 	return result;
@@ -134,26 +147,42 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 	if (player == nullptr)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player is null, SessionID = %lld", sessionID);
-		CRASH();
-		return FALSE;
+		Disconnect(sessionID);
+		return TRUE;
 	}
+	player->LastPacket = 2;
 
 	if (player->bLogined == FALSE)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player is not login, SessionID = %lld", sessionID);
-		CRASH();
-		return FALSE;
+		player->bDisconnected = TRUE;
+		Disconnect(sessionID);
+		InterlockedIncrement64(&m_lPlayerDisCount);
+		return TRUE;
 	}
 	player->recvTime = timeGetTime();
+
+
+	if (message->GetDataSize() < 12)
+	{
+		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Message Len is different SessionID = %lld, Packetlen = %d", sessionID, message->GetDataSize());
+		player->bDisconnected = TRUE;
+		Disconnect(sessionID);
+		InterlockedIncrement64(&m_lPlayerDisCount);
+		return TRUE;
+	}
 
 	(*message) >> iAccountNo;
 
 	if (iAccountNo != player->iAccountNo)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player AccountNo is not correct, SessionID = %lld, REQ_accountNo = %lld, player_accountNo = %lld", sessionID, iAccountNo, player->iAccountNo);
-		CRASH();
-		return FALSE;
+		player->bDisconnected = TRUE;
+		Disconnect(sessionID);
+		InterlockedIncrement64(&m_lPlayerDisCount);
+		return TRUE;
 	}
+	// Payload의 길이가 프로토콜에 정해진 길이만큼 오지 않은 경우
 
 
 	(*message) >> wSectorX;
@@ -162,12 +191,14 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 	if (!SectorUpdate(player, wSectorX, wSectorY))
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() SectorUpdate() failed, SessionID = %lld, player_SecX = %d, player_SecY = %d, REQ_SecX = %d, REQ_SecY = %d", sessionID, player->CurrentSector.iX, player->CurrentSector.iY, wSectorX, wSectorY);
-		CRASH();
-		return FALSE;
+		player->bDisconnected = TRUE;
+		Disconnect(player->SessionID);
+		InterlockedIncrement64(&m_lPlayerDisCount);
+		return TRUE;
 	}
 
 	pPacket = Packet_Proc_RES_SectorMove(iAccountNo, wSectorX, wSectorY);
-	SendPacket_Unicast(sessionID, pPacket);
+	SendPacket_Unicast(player->SessionID, pPacket);
 
 	pPacket->SubRef();
 
@@ -185,27 +216,40 @@ BOOL ChattingServer::Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message)
 	if (player == nullptr)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player is null, SessionID = %lld", sessionID);
-		CRASH();
-		return FALSE;
+		Disconnect(sessionID);
+		return TRUE;
 	}
+	player->LastPacket = 3;
 
 	(*message) >> iAccountNo;
 	if (iAccountNo != player->iAccountNo)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player AccountNo is not correct, SessionID = %lld, REQ_accountNo = %lld, player_accountNo = %lld", sessionID, iAccountNo, player->iAccountNo);
-		CRASH();
-		return FALSE;
+		player->bDisconnected = TRUE;
+		Disconnect(sessionID);
+		InterlockedIncrement64(&m_lPlayerDisCount);
+		return TRUE;
 	}
 	player->recvTime = timeGetTime();
 
 	if (!player->bLogined || player->bDisconnected)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_Proc_REQ_Chat() Player is error, SessionID = %lld, player_bLogined = %B, player_bDisconnected = %B", sessionID, player->bLogined, player->bDisconnected);
-		CRASH();
-		return FALSE;
+		player->bDisconnected = TRUE;
+		Disconnect(sessionID);
+		InterlockedIncrement64(&m_lPlayerDisCount);
+		return TRUE;
 	}	
 	(*message) >> len;
 
+	if (message->GetDataSize() < len)
+	{
+		LOG(L"SERVER", LOG_ERROR, L"Packet_Proc_REQ_Chat() Message len error, SessionID = %lld, lenn ", sessionID, player->bLogined, message->GetDataSize());
+		player->bDisconnected = TRUE;
+		Disconnect(sessionID);
+		InterlockedIncrement64(&m_lPlayerDisCount);
+		return TRUE;
+	}
 
 	memset(szMessage, 0, 1024);
 	message->GetData((char*)szMessage, len);
@@ -224,9 +268,11 @@ BOOL ChattingServer::Packet_Proc_REQ_HEARTBEAT(UINT64 sessionID)
 	if (player == nullptr)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player is null, SessionID = %lld", sessionID);
-		CRASH();
-		return FALSE;
+		Disconnect(sessionID);
+		InterlockedIncrement64(&m_lPlayerDisCount);
+		return TRUE;
 	}
+	player->LastPacket = 4;
 
 	player->recvTime = timeGetTime();
 
@@ -325,7 +371,7 @@ void ChattingServer::Monitoring_Update()
 		wprintf(L" - PlayerPoolAllocCount : %08d\n", m_PlayerPool.GetAllocCount());
 		wprintf(L" - UpdateThread TPS     : %08lld\n", m_lUpdateTps);
 		wprintf(L" - PlayerMap Size       : %08lld\n", m_PlayerMap.size());
-
+		wprintf(L" - AttackDisCount       : %08lld\n", m_lPlayerDisCount);
 		wprintf(L"===============================================================\n");
 		m_lUpdateTps = 0;
 		if (_kbhit() != 0)
@@ -357,10 +403,9 @@ void ChattingServer::Update_Thread()
 		while (!m_MsgQ.isEmpty())
 		{
 			m_MsgQ.Dequeue(newMsg);
+			
 			if (newMsg == nullptr)
-				continue;
-			if (newMsg == nullptr)
-				continue;
+				break;
 			if (CompleteMsg(newMsg) != TRUE)
 			{
 				LOG(L"SERVER", LOG_ERROR, L"CompleteMsg() Error");
@@ -439,7 +484,7 @@ BOOL ChattingServer::CompletePacket(UINT64 sessionID, CMessage* message)
 		break;
 	default:
 		Disconnect(sessionID);
-		result = FALSE;
+		result = TRUE;
 		LOG(L"SERVER", LOG_ERROR, L"Packet Error");
 		break;
 	}
@@ -477,7 +522,7 @@ void ChattingServer::SendPacket_SectorOne(int x, int y, CMessage* message, PLAYE
 	{
 		if (beginItor->second == player)
 			continue;
-		SendPacket_Unicast(beginItor->first, message);
+		SendPacket_Unicast(beginItor->second->SessionID, message);
 	}
 }
 

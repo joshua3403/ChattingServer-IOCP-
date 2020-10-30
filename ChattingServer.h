@@ -29,6 +29,7 @@ class ChattingServer : public joshua::NetworkLibraryWan
 		SECTORPOS CurrentSector;
 		UINT64 recvTime;
 		WCHAR SendBuffer[1024];
+		LONG64 LastPacket;
 	}PLAYER;
 
 	enum en_MSG_TYPE
@@ -63,6 +64,7 @@ private:
 
 	LONG64 m_lUpdateTps;
 	LONG64 m_lPlayerCountTps;
+	LONG64 m_lPlayerDisCount;
 
 	LONG64 m_Count;
 

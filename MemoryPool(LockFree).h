@@ -171,10 +171,9 @@ inline DATA* CLFFreeList<DATA>::Alloc(void)
 	st_TOP_NODE CloneTop;
 	LONG64 MaxCount = m_lMaxCount;
 	// 새로 만들어야 한다면
-	LONG64 lAllocCount = InterlockedIncrement64(&m_lUseCount);
 	LONG64 lUniqueNum = 0;
 
-	if (MaxCount < lAllocCount)
+	if (MaxCount < InterlockedIncrement64(&m_lUseCount))
 	{
 		newNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE) + sizeof(DATA));
 		InterlockedIncrement64(&m_lMaxCount);

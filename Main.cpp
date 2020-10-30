@@ -4,7 +4,7 @@
 int main()
 {
 	ChattingServer* test = new ChattingServer();
-	LOG_SET(LOG_CONSOLE | LOG_FILE, LOG_DEBUG);
+	LOG_SET(/*LOG_CONSOLE |*/ LOG_FILE, LOG_DEBUG);
 
 	setlocale(LC_ALL, "");
 

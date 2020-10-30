@@ -58,9 +58,10 @@ public:
 	// 템플릿 데이터 자체를 받아야 한다.
 	BOOL Push(DATA newData)
 	{
-		st_TOP_NODE stClone;
-		st_NODE* temp = _MemoryPool->Alloc();
+		volatile st_TOP_NODE stClone;
+		volatile st_NODE* temp = _MemoryPool->Alloc();
 		temp->data = newData;
+		temp->pNextNode = nullptr;
 
 		LONG64 newCount = InterlockedIncrement64(&_lCount);
 
@@ -78,25 +79,27 @@ public:
 
 	BOOL Pop(DATA* pData)
 	{
-		st_TOP_NODE stClone;
 
 		if (isEmpty() == TRUE )
 		{
 			return FALSE;
 		}
-
-
 		InterlockedDecrement64(&_lUsingsize);
 
+		volatile st_TOP_NODE stClone;
+		volatile st_NODE* pNextNode;
 		LONG64 newCount = InterlockedIncrement64(&_lCount);
+
 
 		do
 		{
 			stClone.pTopNode = _pTop->pTopNode;
 			stClone.lCount = _pTop->lCount;
-		} while (!InterlockedCompareExchange128((LONG64*)_pTop, newCount, (LONG64)_pTop->pTopNode->pNextNode, (LONG64*)&stClone));
 
-		*pData = stClone.pTopNode->data;
+			pNextNode = stClone.pTopNode->pNextNode;
+			*pData = stClone.pTopNode->data;
+		} while (!InterlockedCompareExchange128((LONG64*)_pTop, newCount, (LONG64)pNextNode, (LONG64*)&stClone));
+
 
 		_MemoryPool->Free(stClone.pTopNode);
 
@@ -107,7 +110,7 @@ public:
 	{
 		if (_lUsingsize == 0)
 		{
-			if (_pTop->pTopNode->pNextNode == nullptr)
+			if (_pTop->pTopNode == nullptr)
 				return TRUE;
 		}
 
