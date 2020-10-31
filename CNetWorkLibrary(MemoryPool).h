@@ -151,7 +151,7 @@ namespace joshua
 		bool PostRecv(st_SESSION* session);
 
 		void SessionRelease(st_SESSION* session);
-		SOCKET DisconnectSocket(SOCKET sock);
+		void DisconnectSocket(SOCKET sock);
 		void DisconnectSession(st_SESSION* pSession);
 		joshua::st_SESSION* SessionReleaseCheck(UINT64 iSessionID);
 

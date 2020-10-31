@@ -214,7 +214,7 @@ void joshua::NetworkLibraryWan::AcceptThread(void)
 			WCHAR szParam[16] = { 0 };
 			InetNtop(AF_INET, &clientaddr.sin_addr, szParam, 16);
 			LOG(L"SERVER", LOG_ERROR, L"%s client IP : %s, port : %d\n", L"accept() Error!", szParam, ntohs(clientaddr.sin_port));
-			clientsocket = DisconnectSocket(clientsocket);
+			DisconnectSocket(clientsocket);
 			continue;
 		}
 
@@ -223,7 +223,7 @@ void joshua::NetworkLibraryWan::AcceptThread(void)
 			WCHAR szParam[16] = { 0 };
 			InetNtop(AF_INET, &clientaddr.sin_addr, szParam, 16);
 			LOG(L"SERVER", LOG_WARNNING, L"client IP : %s, port : %d connection denied\n", szParam, ntohs(clientaddr.sin_port));
-			clientsocket = DisconnectSocket(clientsocket);
+			DisconnectSocket(clientsocket);
 			continue;
 		}
 
@@ -232,7 +232,7 @@ void joshua::NetworkLibraryWan::AcceptThread(void)
 			WCHAR szParam[16] = { 0 };
 			InetNtop(AF_INET, &clientaddr.sin_addr, szParam, 16);
 			LOG(L"SERVER", LOG_WARNNING, L"client IP : %s, port : %d connection denied, MaxClient Over\n", szParam, ntohs(clientaddr.sin_port));
-			clientsocket = DisconnectSocket(clientsocket);
+			DisconnectSocket(clientsocket);
 			continue;
 		}
 		st_SESSION* pSession = InsertSession(clientsocket, &clientaddr);
@@ -241,7 +241,7 @@ void joshua::NetworkLibraryWan::AcceptThread(void)
 			// ¼­¹ö ²¨¾ßÇÔ
 			// TODO dump³»°í ²ôÀÚ
 			InterlockedDecrement64(&_dwSessionCount);
-			pSession->socket = DisconnectSocket(clientsocket);
+			DisconnectSocket(clientsocket);
 			CRASH();
 			continue;
 		}
@@ -344,7 +344,6 @@ void joshua::NetworkLibraryWan::WorkerThread(void)
 				{
 					SessionRelease(pSession);
 				}
-				continue;
 			}
 			else
 			{
@@ -552,29 +551,28 @@ void joshua::NetworkLibraryWan::SessionRelease(st_SESSION* pSession)
 	InterlockedDecrement64(&_dwSessionCount);
 }
 
-SOCKET joshua::NetworkLibraryWan::DisconnectSocket(SOCKET sock)
+void joshua::NetworkLibraryWan::DisconnectSocket(SOCKET sock)
 {
-	//LINGER optval;
-	//int retval;
-	//optval.l_onoff = 1;
-	//optval.l_linger = 0;
+	LINGER optval;
+	int retval;
+	optval.l_onoff = 1;
+	optval.l_linger = 0;
 
-	//retval = setsockopt(sock, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
-	//closesocket(sock);
+	retval = setsockopt(sock, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
+	closesocket(sock);
 
-	LONG64 sessionSock = sock;
-	LONG64 invalidSock = INVALID_SOCKET;
-	if (InterlockedExchange64(&sessionSock, invalidSock) == sock)
-	{
-		LINGER optval;
-		int retval;
-		optval.l_onoff = 1;
-		optval.l_linger = 0;
+	//LONG64 sessionSock = sock;
+	//LONG64 invalidSock = INVALID_SOCKET;
+	//if (InterlockedExchange64(&sessionSock, invalidSock) == sock)
+	//{
+	//	LINGER optval;
+	//	int retval;
+	//	optval.l_onoff = 1;
+	//	optval.l_linger = 0;
 
-		retval = setsockopt(sock, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
-		closesocket(sock);
-		return INVALID_SOCKET;
-	}
+	//	retval = setsockopt(sock, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
+	//	closesocket(sock);
+	//}
 }
 
 void joshua::NetworkLibraryWan::SendPacket(UINT64 id, CMessage* message)
@@ -678,19 +676,18 @@ void joshua::NetworkLibraryWan::PrintPacketCount()
 
 void joshua::NetworkLibraryWan::DisconnectSession(st_SESSION* pSession)
 {	
-	LONG sessionSock = pSession->socket;
-	if (InterlockedExchange(&sessionSock, INVALID_SOCKET) == pSession->socket)
-	{
-		LINGER optval;
-		int retval;
-		optval.l_onoff = 1;
-		optval.l_linger = 0;
+	//LONG sock = pSession->socket;
+	//LONG invalid = INVALID_SOCKET;
+	//if (InterlockedExchange((LONG*)&sock, invalid) == pSession->socket)
+	//{
+	//}
+	LINGER optval;
+	int retval;
+	optval.l_onoff = 1;
+	optval.l_linger = 0;
 
-		retval = setsockopt(pSession->socket, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
-		closesocket(pSession->socket);
-		pSession->socket = INVALID_SOCKET;
-	}
-
+	retval = setsockopt(pSession->socket, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
+	closesocket(pSession->socket);
 }
 
 joshua::st_SESSION* joshua::NetworkLibraryWan::SessionReleaseCheck(UINT64 iSessionID)

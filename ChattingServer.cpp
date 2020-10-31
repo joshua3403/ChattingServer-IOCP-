@@ -56,20 +56,22 @@ BOOL ChattingServer::DeletePlayer(UINT64 sessionID)
 	}
 	else
 	{
-		if (player->CurrentSector.iX != -1 && player->CurrentSector.iY != -1)
-			ErasePlayerInSector(player->SessionID, player->CurrentSector.iX, player->CurrentSector.iY);
-		
-		m_AccountNoMap.erase(player->iAccountNo);
-		player->iAccountNo = 0;
-		player->bDisconnected = FALSE;
-		ErasePlayer(sessionID);
-		m_PlayerPool.Free(player);
+		if (player->bDisconnected == FALSE)
+		{
+			if (player->CurrentSector.iX != -1 && player->CurrentSector.iY != -1)
+				ErasePlayerInSector(player->SessionID, player->CurrentSector.iX, player->CurrentSector.iY);
 
-		InterlockedDecrement64(&m_lPlayerCountTps);
-		return TRUE;
+			//m_AccountNoMap.erase(player->iAccountNo);
+			player->iAccountNo = 0;
+			player->bDisconnected = FALSE;
+			ErasePlayer(sessionID);
+			m_PlayerPool.Free(player);
 
+			InterlockedDecrement64(&m_lPlayerCountTps);
+		}
 	}
 	return TRUE;
+
 }
 
 BOOL ChattingServer::Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message)
@@ -98,24 +100,17 @@ BOOL ChattingServer::Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message)
 		std::unordered_map<UINT64, PLAYER*>::iterator tempPlayer = m_AccountNoMap.find(iAccountNo);
 		if ((tempPlayer != m_AccountNoMap.end()) && (tempPlayer->second->SessionID != sessionID) && (tempPlayer->second->iAccountNo == iAccountNo))
 		{
-			tempPlayer->second->bDisconnected = TRUE;
 			Disconnect(tempPlayer->second->SessionID);
-			//if (tempPlayer->second->CurrentSector.iX != -1 && tempPlayer->second->CurrentSector.iY != -1)
-			//	ErasePlayerInSector(tempPlayer->second->SessionID, tempPlayer->second->CurrentSector.iX, tempPlayer->second->CurrentSector.iY);
+		//	//if (tempPlayer->second->CurrentSector.iX != -1 && tempPlayer->second->CurrentSector.iY != -1)
+		//	//	ErasePlayerInSector(tempPlayer->second->SessionID, tempPlayer->second->CurrentSector.iX, tempPlayer->second->CurrentSector.iY);
 
-			//m_AccountNoMap.erase(tempPlayer->second->iAccountNo);
-			//tempPlayer->second->iAccountNo = 0;
-			//ErasePlayer(tempPlayer->second->SessionID);
-			//m_PlayerPool.Free(tempPlayer->second);
+		//	//m_AccountNoMap.erase(tempPlayer->second->iAccountNo);
+		//	//tempPlayer->second->iAccountNo = 0;
+		//	//ErasePlayer(tempPlayer->second->SessionID);
+		//	//m_PlayerPool.Free(tempPlayer->second);
 
 			InterlockedDecrement64(&m_lPlayerCountTps);
 		}
-	}
-
-	// 삭제될 예정인 플레이어
-	if (player->bDisconnected == TRUE)
-	{
-		return TRUE;
 	}
 
 	player->bLogined = TRUE;
@@ -126,7 +121,7 @@ BOOL ChattingServer::Packet_Proc_REQ_Login(UINT64 sessionID, CMessage* message)
 	player->LastPacket = 1;
 
 	message->GetData(player->SessionKey, dfSESSIONKEY_LEN);
-	m_AccountNoMap.insert(std::make_pair(iAccountNo, player));
+	//m_AccountNoMap.insert(std::make_pair(iAccountNo, player));
 	InterlockedIncrement64(&m_lPlayerCountTps);
 
 	pPacket = Packet_Proc_RES_Login(iAccountNo, status);
@@ -155,7 +150,6 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 	if (player->bLogined == FALSE)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player is not login, SessionID = %lld", sessionID);
-		player->bDisconnected = TRUE;
 		Disconnect(sessionID);
 		InterlockedIncrement64(&m_lPlayerDisCount);
 		return TRUE;
@@ -166,7 +160,6 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 	if (message->GetDataSize() < 12)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Message Len is different SessionID = %lld, Packetlen = %d", sessionID, message->GetDataSize());
-		player->bDisconnected = TRUE;
 		Disconnect(sessionID);
 		InterlockedIncrement64(&m_lPlayerDisCount);
 		return TRUE;
@@ -177,7 +170,6 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 	if (iAccountNo != player->iAccountNo)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player AccountNo is not correct, SessionID = %lld, REQ_accountNo = %lld, player_accountNo = %lld", sessionID, iAccountNo, player->iAccountNo);
-		player->bDisconnected = TRUE;
 		Disconnect(sessionID);
 		InterlockedIncrement64(&m_lPlayerDisCount);
 		return TRUE;
@@ -191,7 +183,6 @@ BOOL ChattingServer::Packet_Proc_REQ_SectorMove(UINT64 sessionID, CMessage* mess
 	if (!SectorUpdate(player, wSectorX, wSectorY))
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() SectorUpdate() failed, SessionID = %lld, player_SecX = %d, player_SecY = %d, REQ_SecX = %d, REQ_SecY = %d", sessionID, player->CurrentSector.iX, player->CurrentSector.iY, wSectorX, wSectorY);
-		player->bDisconnected = TRUE;
 		Disconnect(player->SessionID);
 		InterlockedIncrement64(&m_lPlayerDisCount);
 		return TRUE;
@@ -225,7 +216,6 @@ BOOL ChattingServer::Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message)
 	if (iAccountNo != player->iAccountNo)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_ProcREQ_SectorMove() Player AccountNo is not correct, SessionID = %lld, REQ_accountNo = %lld, player_accountNo = %lld", sessionID, iAccountNo, player->iAccountNo);
-		player->bDisconnected = TRUE;
 		Disconnect(sessionID);
 		InterlockedIncrement64(&m_lPlayerDisCount);
 		return TRUE;
@@ -235,7 +225,6 @@ BOOL ChattingServer::Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message)
 	if (!player->bLogined || player->bDisconnected)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_Proc_REQ_Chat() Player is error, SessionID = %lld, player_bLogined = %B, player_bDisconnected = %B", sessionID, player->bLogined, player->bDisconnected);
-		player->bDisconnected = TRUE;
 		Disconnect(sessionID);
 		InterlockedIncrement64(&m_lPlayerDisCount);
 		return TRUE;
@@ -245,7 +234,6 @@ BOOL ChattingServer::Packet_Proc_REQ_Chat(UINT64 sessionID, CMessage* message)
 	if (message->GetDataSize() < len)
 	{
 		LOG(L"SERVER", LOG_ERROR, L"Packet_Proc_REQ_Chat() Message len error, SessionID = %lld, lenn ", sessionID, player->bLogined, message->GetDataSize());
-		player->bDisconnected = TRUE;
 		Disconnect(sessionID);
 		InterlockedIncrement64(&m_lPlayerDisCount);
 		return TRUE;
